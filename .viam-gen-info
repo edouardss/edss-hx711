@@ -1,0 +1,12 @@
+{
+  "module_name": "hx711-loadcell",
+  "namespace": "kodama",
+  "language": "python",
+  "resource_type": "component",
+  "resource_subtype": "sensor",
+  "model_name": "loadcell",
+  "enable_cloud_build": true,
+  "initialize_git": false,
+  "generator_version": "0.1.0",
+  "generated_on": "2025-02-26T02:20:11.808560379Z"
+}

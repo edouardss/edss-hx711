@@ -1,0 +1,26 @@
+{
+  "$schema": "https://dl.viam.dev/module.schema.json",
+  "module_id": "kodama:hx711-loadcell",
+  "visibility": "private",
+  "url": "",
+  "description": "Modular sensor component: loadcell",
+  "models": [
+    {
+      "api": "rdk:component:sensor",
+      "model": "kodama:hx711-loadcell:loadcell",
+      "short_description": "Provide a short (100 characters or less) description of this model here",
+      "markdown_link": "README.md#model-kodamahx711-loadcellloadcell"
+    }
+  ],
+  "entrypoint": "reload.sh",
+  "first_run": "",
+  "build": {
+    "build": "rm -f module.tar.gz && tar czf module.tar.gz requirements.txt src/*.py meta.json setup.sh reload.sh",
+    "setup": "./setup.sh",
+    "path": "module.tar.gz",
+    "arch": [
+      "linux/amd64",
+      "linux/arm64"
+    ]
+  }
+}
