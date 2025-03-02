@@ -49,6 +49,15 @@ class Loadcell(Sensor, EasyResource):
         if "gain" in fields:
             if not fields["gain"].HasField("number_value"):
                 raise Exception("Gain must be a valid number.")
+        if "doutPin" in fields:
+            if not fields["doutPin"].HasField("number_value"):
+                raise Exception("Data Out pin must be a valid number.")
+        if "sckPin" in fields:
+            if not fields["sckPin"].HasField("number_value"):
+                raise Exception("Gain must be a valid number.")
+        if "numberOfReadings" in fields:
+            if not fields["numberOfReadings"].HasField("number_value"):
+                raise Exception("Gain must be a valid number.")
 
         return []
 
@@ -63,6 +72,9 @@ class Loadcell(Sensor, EasyResource):
         """
         attrs = struct_to_dict(config.attributes)
         self.gain = float(attrs.get("gain", 64))
+        self.doutPin = int(attrs.get("doutPin", 5))
+        self.sckPin = int(attrs.get("sckPin", 6))
+        self.numberOfReadings = int(attrs.get("numberOfReadings", 3))
         return super().reconfigure(config, dependencies)
 
     async def get_readings(
@@ -75,21 +87,22 @@ class Loadcell(Sensor, EasyResource):
         
         try:
             hx711 = HX711(
-                dout_pin=5,
-                pd_sck_pin=6,
+                dout_pin=self.doutPin,
+                pd_sck_pin=self.sckPin,
                 channel='A',
                 gain=self.gain
             )
 
             hx711.reset()   # Before we start, reset the HX711 (not obligate)
-            measures = hx711.get_raw_data(times=3)
+            measures = hx711.get_raw_data(times=self.numberOfReadings)
+            avg = sum(measures) / len(measures)
         finally:
             GPIO.cleanup()  # always do a GPIO cleanup in your scripts!
 
 
         # Return a dictionary of the readings
         return {
-            "weight": measures
+            "weight": avg
         }
 
 if __name__ == "__main__":

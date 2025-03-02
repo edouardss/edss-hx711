@@ -11,8 +11,10 @@ The following attribute template can be used to configure this model:
 
 ```json
 {
-"attribute_1": <float>,
-"attribute_2": <string>
+  "gain": 64,
+  "doutPin": 5,
+  "sckPin":6,
+  "numberOfReadings":3
 }
 ```
 
@@ -22,29 +24,19 @@ The following attributes are available for this model:
 
 | Name          | Type   | Inclusion | Description                |
 |---------------|--------|-----------|----------------------------|
-| `attribute_1` | float  | Required  | Description of attribute 1 |
-| `attribute_2` | string | Optional  | Description of attribute 2 |
+| `gain` | float  | Optional  | gain for hx711 readings |
+| `doutPin` | int | Optional  | pin for data out |
+| `sckPin` | int | Optional  | pin for clock |
+| `numberOfReadings` | int | Optional  | number of readings to take each time |
 
 #### Example Configuration
 
 ```json
 {
-  "attribute_1": 1.0,
-  "attribute_2": "foo"
+  "gain": 64,
+  "doutPin": 5,
+  "sckPin":6,
+  "numberOfReadings":3
 }
 ```
 
-### DoCommand
-
-If your model implements DoCommand, provide an example payload of each command that is supported and the arguments that can be used. If your model does not implement DoCommand, remove this section.
-
-#### Example DoCommand
-
-```json
-{
-  "command_name": {
-    "arg1": "foo",
-    "arg2": 1
-  }
-}
-```

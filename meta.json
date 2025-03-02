@@ -2,7 +2,7 @@
   "$schema": "https://dl.viam.dev/module.schema.json",
   "module_id": "kodama:hx711-loadcell",
   "visibility": "private",
-  "url": "",
+  "url": "https://github.com/matthewlouismueller/hx711-loadcell",
   "description": "Modular sensor component: loadcell",
   "models": [
     {
@@ -12,12 +12,12 @@
       "markdown_link": "README.md#model-kodamahx711-loadcellloadcell"
     }
   ],
-  "entrypoint": "reload.sh",
+  "entrypoint": "dist/main",
   "first_run": "",
   "build": {
-    "build": "rm -f module.tar.gz && tar czf module.tar.gz requirements.txt src/*.py meta.json setup.sh reload.sh",
+    "build": "./build.sh",
     "setup": "./setup.sh",
-    "path": "module.tar.gz",
+    "path": "dist/archive.tar.gz",
     "arch": [
       "linux/amd64",
       "linux/arm64"
