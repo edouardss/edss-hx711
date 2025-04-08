@@ -1,15 +1,15 @@
 {
   "$schema": "https://dl.viam.dev/module.schema.json",
-  "module_id": "kodama:hx711-loadcell",
+  "module_id": "edss:edss-hx711-test",
   "visibility": "private",
-  "url": "https://github.com/matthewlouismueller/hx711-loadcell",
+  "url": "https://github.com/edouardss/edss-hx711-test",
   "description": "Modular sensor component: loadcell",
   "models": [
     {
       "api": "rdk:component:sensor",
-      "model": "kodama:hx711-loadcell:loadcell",
+      "model": "edss:hx711-loadcell:loadcell",
       "short_description": "Provide a short (100 characters or less) description of this model here",
-      "markdown_link": "README.md#model-kodamahx711-loadcellloadcell"
+      "markdown_link": ""
     }
   ],
   "entrypoint": "dist/main",
