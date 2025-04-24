@@ -1,49 +1,30 @@
 import asyncio
-from typing import Any, ClassVar, Final, List, Mapping, Optional, Sequence
+from typing import Any, ClassVar, Dict, Final, Mapping, Optional, Sequence
 
 from typing_extensions import Self
-from viam.components.sensor import Sensor
+from viam.components.sensor import *
 from viam.module.module import Module
 from viam.proto.app.robot import ComponentConfig
 from viam.proto.common import ResourceName
 from viam.resource.base import ResourceBase
 from viam.resource.easy_resource import EasyResource
 from viam.resource.types import Model, ModelFamily
-from viam.utils import SensorReading, struct_to_dict
-
-import RPi.GPIO as GPIO
+from viam.utils import SensorReading, struct_to_dict, ValueTypes
+import random
 from hx711 import HX711
+import RPi.GPIO as GPIO
 
 class Loadcell(Sensor, EasyResource):
-    MODEL: ClassVar[Model] = Model(ModelFamily("kodama", "hx711-loadcell"), "loadcell")
+    MODEL: ClassVar[Model] = Model(ModelFamily("edss", "hx711-loadcell"), "loadcell")
 
     @classmethod
     def new(
         cls, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]
     ) -> Self:
-        """This method creates a new instance of this Sensor component.
-        The default implementation sets the name from the `config` parameter and then calls `reconfigure`.
-
-        Args:
-            config (ComponentConfig): The configuration for this resource
-            dependencies (Mapping[ResourceName, ResourceBase]): The dependencies (both implicit and explicit)
-
-        Returns:
-            Self: The resource
-        """
         return super().new(config, dependencies)
 
     @classmethod
     def validate_config(cls, config: ComponentConfig) -> Sequence[str]:
-        """This method allows you to validate the configuration object received from the machine,
-        as well as to return any implicit dependencies based on that `config`.
-
-        Args:
-            config (ComponentConfig): The configuration for this resource
-
-        Returns:
-            Sequence[str]: A list of implicit dependencies
-        """
         fields = config.attributes.fields
 
         if "gain" in fields:
@@ -58,23 +39,22 @@ class Loadcell(Sensor, EasyResource):
         if "numberOfReadings" in fields:
             if not fields["numberOfReadings"].HasField("number_value"):
                 raise Exception("Gain must be a valid number.")
+        if "tare_offset" in fields:
+            if not fields["tare_offset"].HasField("number_value"):
+                raise Exception("Tare offset must be a valid number.")
+        # If all checks pass, return an empty list indicating no errors
 
         return []
 
     def reconfigure(
         self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]
     ):
-        """This method allows you to dynamically update your service when it receives a new `config` object.
-
-        Args:
-            config (ComponentConfig): The new configuration
-            dependencies (Mapping[ResourceName, ResourceBase]): Any dependencies (both implicit and explicit)
-        """
         attrs = struct_to_dict(config.attributes)
         self.gain = float(attrs.get("gain", 64))
         self.doutPin = int(attrs.get("doutPin", 5))
         self.sckPin = int(attrs.get("sckPin", 6))
         self.numberOfReadings = int(attrs.get("numberOfReadings", 3))
+        self.tare_offset = float(attrs.get("tare_offset", 0.0))
         return super().reconfigure(config, dependencies)
 
     async def get_readings(
@@ -93,18 +73,55 @@ class Loadcell(Sensor, EasyResource):
                 gain=self.gain
             )
 
-            hx711.reset()   # Before we start, reset the HX711 (not obligate)
+            hx711.reset()   # Reset the HX711 before starting
             measures = hx711.get_raw_data(times=self.numberOfReadings)
-            avg = sum(measures) / len(measures)
+            # Convert each measure to kgs by subtracting tare offset and dividing by 8200
+            measures_kg = [(measure - self.tare_offset) / 8200 for measure in measures]
+            avg_kgs = sum(measures_kg) / len(measures_kg)  # Assuming 8200 ~ 1kg, then this converts to kg
         finally:
-            GPIO.cleanup()  # always do a GPIO cleanup in your scripts!
-
+            GPIO.cleanup()  # Always clean up GPIO
 
         # Return a dictionary of the readings
         return {
-            "weight": avg
+            "doutPin": self.doutPin,
+            "sckPin": self.sckPin,
+            "gain": self.gain,
+            "numberOfReadings": self.numberOfReadings,
+            "tare_offset": self.tare_offset,
+            "measures": measures_kg,  # Now returning measures in kg
+            "weight": avg_kgs
         }
+
+    async def tare(self):
+        """Tare the load cell by setting the current reading as the zero offset."""
+        
+        try:
+            hx711 = HX711(
+                dout_pin=self.doutPin,
+                pd_sck_pin=self.sckPin,
+                channel='A',
+                gain=self.gain
+            )
+
+            hx711.reset()   # Reset HX711 before starting
+            measures = hx711.get_raw_data(times=self.numberOfReadings)
+            self.tare_offset = sum(measures) / len(measures)  # Set tare offset
+        finally:
+            GPIO.cleanup()  # Always clean up GPIO
+
+    async def do_command(
+            self,
+            command: Mapping[str, ValueTypes],
+            *,
+            timeout: Optional[float] = None,
+            **kwargs
+        ) -> Mapping[str, ValueTypes]:
+            result = {key: False for key in command.keys()}
+            for (name, args) in command.items():
+                if name == 'tare':
+                    await self.tare(*args)
+                    result[name] = True
+            return result
 
 if __name__ == "__main__":
     asyncio.run(Module.run_from_registry())
-
