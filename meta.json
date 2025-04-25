@@ -1,14 +1,14 @@
 {
   "$schema": "https://dl.viam.dev/module.schema.json",
-  "module_id": "edss:edss-hx711-test",
+  "module_id": "edss:edss-hx711",
   "visibility": "private",
-  "url": "https://github.com/edouardss/edss-hx711-test",
+  "url": "https://github.com/edouardss/edss-hx711",
   "description": "Modular sensor component: loadcell",
   "models": [
     {
       "api": "rdk:component:sensor",
       "model": "edss:hx711-loadcell:loadcell",
-      "short_description": "Provide a short (100 characters or less) description of this model here",
+      "short_description": "basic loadcell sensor with a tare function, returning in kgs.",
       "markdown_link": ""
     }
   ],
