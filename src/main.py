@@ -87,7 +87,7 @@ class Loadcell(Sensor, EasyResource):
             "sckPin": self.sckPin,
             # "gain": self.gain,
             "numberOfReadings": self.numberOfReadings,
-            "tare_offset": self.tare_offset,
+            #"tare_offset": self.tare_offset,
             "measures": measures_kg,  # Now returning measures in kg
             "weight": avg_kgs
         }
