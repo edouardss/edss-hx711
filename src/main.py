@@ -85,7 +85,7 @@ class Loadcell(Sensor, EasyResource):
         return {
             "doutPin": self.doutPin,
             "sckPin": self.sckPin,
-            "gain": self.gain,
+            # "gain": self.gain,
             "numberOfReadings": self.numberOfReadings,
             "tare_offset": self.tare_offset,
             "measures": measures_kg,  # Now returning measures in kg
