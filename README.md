@@ -2,7 +2,8 @@
 
 Module for supporting the HX711 ADC for use with a load cell to measure weight.
 
-## Model kodama:hx711-loadcell:loadcell
+intially as kodama;hx711-loadcell:loadcell
+Expanded to include tare and wider reading payload. 
 
 Loadcell model uses the hx711 Python library and currently is set to take the specified number of readings and return the average value of those readings.
 
