@@ -9,7 +9,7 @@
       "api": "rdk:component:sensor",
       "model": "edss:hx711-loadcell:loadcell",
       "short_description": "basic loadcell sensor with a tare function, returning in kgs.",
-      "markdown_link": ""
+      "markdown_link": "README.md"
     }
   ],
   "entrypoint": "dist/main",
