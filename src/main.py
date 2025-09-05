@@ -3,6 +3,7 @@ from typing import Any, ClassVar, Dict, Final, Mapping, Optional, Sequence
 
 from typing_extensions import Self
 from viam.components.sensor import *
+from viam.logging import getLogger
 from viam.module.module import Module
 from viam.proto.app.robot import ComponentConfig
 from viam.proto.common import ResourceName
@@ -13,6 +14,9 @@ from viam.utils import SensorReading, struct_to_dict, ValueTypes
 import random
 from hx711 import HX711
 import RPi.GPIO as GPIO
+
+# Set up logging
+LOGGER = getLogger(__name__)
 
 class Loadcell(Sensor, EasyResource):
     MODEL: ClassVar[Model] = Model(ModelFamily("edss", "hx711-loadcell"), "loadcell")
@@ -55,7 +59,54 @@ class Loadcell(Sensor, EasyResource):
         self.sckPin = int(attrs.get("sckPin", 6))
         self.numberOfReadings = int(attrs.get("numberOfReadings", 3))
         self.tare_offset = float(attrs.get("tare_offset", 0.0))
+        
+        # Initialize HX711 object if not already done
+        if not hasattr(self, 'hx711') or self.hx711 is None:
+            self.hx711 = None
+            self.get_hx711()
+            
         return super().reconfigure(config, dependencies)
+
+    def get_hx711(self):
+        """Get the HX711 instance, creating it if necessary."""
+        if self.hx711 is None:
+            try:
+                self.hx711 = HX711(
+                    dout_pin=self.doutPin,
+                    pd_sck_pin=self.sckPin,
+                    channel='A',
+                    gain=self.gain
+                )
+                LOGGER.info("HX711 initialized successfully")
+            except Exception as e:
+                LOGGER.error(f"Failed to initialize HX711: {e}")
+                # Clean up the failed object
+                if hasattr(self, 'hx711') and self.hx711 is not None:
+                    try:
+                        del self.hx711
+                    except Exception as cleanup_error:
+                        LOGGER.warning(f"Error cleaning up failed HX711 object: {cleanup_error}")
+                self.hx711 = None
+                raise
+        return self.hx711
+
+    def cleanup_gpio_pins(self):
+        """Clean up only the specific GPIO pins used by this sensor."""
+        try:
+            GPIO.cleanup((self.doutPin, self.sckPin))
+        except Exception as e:
+            LOGGER.warning(f"Error cleaning up GPIO pins {self.doutPin}, {self.sckPin}: {e}")
+
+    def close(self):
+        """Clean up resources when the component is closed."""
+        try:
+            if hasattr(self, 'hx711') and self.hx711 is not None:
+                del self.hx711
+                self.hx711 = None
+            self.cleanup_gpio_pins()
+            LOGGER.info("Load cell component closed and resources cleaned up")
+        except Exception as e:
+            LOGGER.warning(f"Error during component cleanup: {e}")
 
     async def get_readings(
         self,
@@ -66,48 +117,53 @@ class Loadcell(Sensor, EasyResource):
     ) -> Mapping[str, SensorReading]:
         
         try:
-            hx711 = HX711(
-                dout_pin=self.doutPin,
-                pd_sck_pin=self.sckPin,
-                channel='A',
-                gain=self.gain
-            )
-
+            hx711 = self.get_hx711()
             hx711.reset()   # Reset the HX711 before starting
             measures = hx711.get_raw_data(times=self.numberOfReadings)
             # Convert each measure to kgs by subtracting tare offset and dividing by 8200
             measures_kg = [(measure - self.tare_offset) / 8200 for measure in measures]
             avg_kgs = sum(measures_kg) / len(measures_kg)  # Assuming 8200 ~ 1kg, then this converts to kg
-        finally:
-            GPIO.cleanup()  # Always clean up GPIO
-
-        # Return a dictionary of the readings
-        return {
-            "doutPin": self.doutPin,
-            "sckPin": self.sckPin,
-            "gain": self.gain,
-            "numberOfReadings": self.numberOfReadings,
-            "tare_offset": self.tare_offset / 8200, # reporting tare value in kgs for consistency with readings
-            "measures": measures_kg,  # Now returning measures in kg
-            "weight": avg_kgs
-        }
+            
+            # Return a dictionary of the readings
+            return {
+                "doutPin": self.doutPin,
+                "sckPin": self.sckPin,
+                "gain": self.gain,
+                "numberOfReadings": self.numberOfReadings,
+                "tare_offset": self.tare_offset / 8200, # reporting tare value in kgs for consistency with readings
+                "measures": measures_kg,  # Now returning measures in kg
+                "weight": avg_kgs
+            }
+        except Exception as e:
+            LOGGER.error(f"Error getting readings from load cell: {e}")
+            # If there's an error, clean up and reset the HX711 object for next time
+            if hasattr(self, 'hx711') and self.hx711 is not None:
+                try:
+                    del self.hx711
+                except Exception as cleanup_error:
+                    LOGGER.warning(f"Error cleaning up HX711 object after reading error: {cleanup_error}")
+            self.hx711 = None
+            raise
 
     async def tare(self):
         """Tare the load cell by setting the current reading as the zero offset."""
         
         try:
-            hx711 = HX711(
-                dout_pin=self.doutPin,
-                pd_sck_pin=self.sckPin,
-                channel='A',
-                gain=self.gain
-            )
-
+            hx711 = self.get_hx711()
             hx711.reset()   # Reset HX711 before starting
             measures = hx711.get_raw_data(times=self.numberOfReadings)
             self.tare_offset = sum(measures) / len(measures)  # Set tare offset
-        finally:
-            GPIO.cleanup()  # Always clean up GPIO
+            LOGGER.info(f"Tare completed. New offset: {self.tare_offset}")
+        except Exception as e:
+            LOGGER.error(f"Error during tare operation: {e}")
+            # If there's an error, clean up and reset the HX711 object for next time
+            if hasattr(self, 'hx711') and self.hx711 is not None:
+                try:
+                    del self.hx711
+                except Exception as cleanup_error:
+                    LOGGER.warning(f"Error cleaning up HX711 object after tare error: {cleanup_error}")
+            self.hx711 = None
+            raise
 
     async def do_command(
             self,
