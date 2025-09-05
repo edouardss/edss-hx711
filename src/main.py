@@ -87,7 +87,7 @@ class Loadcell(Sensor, EasyResource):
             "sckPin": self.sckPin,
             "gain": self.gain,
             "numberOfReadings": self.numberOfReadings,
-            "tare_offset": self.tare_offset,
+            "tare_offset": self.tare_offset / 8200, # reporting tare value in kgs for consistency with readings
             "measures": measures_kg,  # Now returning measures in kg
             "weight": avg_kgs
         }
@@ -118,9 +118,9 @@ class Loadcell(Sensor, EasyResource):
         ) -> Mapping[str, ValueTypes]:
             result = {key: False for key in command.keys()}
             for (name, args) in command.items():
-                if name == 'tare':
+                if name == "tare":
                     await self.tare(*args)
-                    result[name] = True
+                    result[name] = self.tare_offset / 8200
             return result
 
 if __name__ == "__main__":
