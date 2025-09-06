@@ -35,10 +35,10 @@ class Loadcell(Sensor, EasyResource):
                 raise Exception("Data Out pin must be a valid number.")
         if "sckPin" in fields:
             if not fields["sckPin"].HasField("number_value"):
-                raise Exception("Gain must be a valid number.")
+                raise Exception("Clock pin must be a valid number.")
         if "numberOfReadings" in fields:
             if not fields["numberOfReadings"].HasField("number_value"):
-                raise Exception("Gain must be a valid number.")
+                raise Exception("Number of readings must be a valid number.")
         if "tare_offset" in fields:
             if not fields["tare_offset"].HasField("number_value"):
                 raise Exception("Tare offset must be a valid number.")
@@ -73,7 +73,9 @@ class Loadcell(Sensor, EasyResource):
                     channel='A',
                     gain=self.gain
                 )
-                self.logger.info("HX711 initialized successfully")
+                # Reset the HX711 only when first created
+                self.hx711.reset()
+                self.logger.info("HX711 initialized and reset successfully")
             except Exception as e:
                 self.logger.error(f"Failed to initialize HX711: {e}")
                 # Clean up the failed object
@@ -114,7 +116,6 @@ class Loadcell(Sensor, EasyResource):
         
         try:
             hx711 = self.get_hx711()
-            hx711.reset()   # Reset the HX711 before starting
             measures = hx711.get_raw_data(times=self.numberOfReadings)
             # Convert each measure to kgs by subtracting tare offset and dividing by 8200
             measures_kg = [(measure - self.tare_offset) / 8200 for measure in measures]
@@ -146,7 +147,6 @@ class Loadcell(Sensor, EasyResource):
         
         try:
             hx711 = self.get_hx711()
-            hx711.reset()   # Reset HX711 before starting
             measures = hx711.get_raw_data(times=self.numberOfReadings)
             self.tare_offset = sum(measures) / len(measures)  # Set tare offset
             self.logger.info(f"Tare completed. New offset: {self.tare_offset}")
