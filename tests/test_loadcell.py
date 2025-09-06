@@ -463,6 +463,126 @@ class TestLoadcellTare:
     
     @pytest.mark.asyncio
     @patch('main.HX711')
+    async def test_tare_complete_workflow(self, mock_hx711_class):
+        """
+        Test complete tare workflow:
+        1. Simulation sends non-zero reading
+        2. Tare function is called and sets tare value to the reading
+        3. New reading is called and value should be (raw_value - tare_offset)
+        """
+        # Create mock HX711 with a specific weight simulation
+        mock_hx711 = MockHX711(5, 6, 'A', 64)
+        test_weight = 2.5  # 2.5kg
+        mock_hx711.set_simulated_weight(test_weight)
+        mock_hx711_class.return_value = mock_hx711
+        
+        loadcell = create_test_loadcell()
+        loadcell.doutPin = 5
+        loadcell.sckPin = 6
+        loadcell.gain = 64
+        loadcell.numberOfReadings = 3
+        loadcell.tare_offset = 0.0  # Start with no tare offset
+        
+        # Step 1: Get initial reading (should show the test weight)
+        initial_reading = await loadcell.get_readings()
+        initial_weight = initial_reading["weight"]
+        
+        # Verify initial reading is approximately the test weight
+        assert abs(initial_weight - test_weight) < 0.2, f"Initial reading {initial_weight}kg should be close to {test_weight}kg (with mock noise tolerance)"
+        
+        # Step 2: Call tare function - this should set tare_offset to the current reading
+        await loadcell.tare()
+        
+        # Verify tare_offset is set to approximately the test weight in raw units
+        expected_tare_offset = test_weight * 8200  # Convert kg to raw units
+        assert abs(loadcell.tare_offset - expected_tare_offset) < 1000, f"Tare offset {loadcell.tare_offset} should be close to {expected_tare_offset} (with mock noise tolerance)"
+        
+        # Step 3: Get new reading after tare - should now be close to zero
+        post_tare_reading = await loadcell.get_readings()
+        post_tare_weight = post_tare_reading["weight"]
+        
+        # The new reading should be close to zero since we tared at the current weight
+        assert abs(post_tare_weight) < 0.2, f"Post-tare reading {post_tare_weight}kg should be close to 0kg (with mock noise tolerance)"
+        
+        # Verify the calculation: (raw_value - tare_offset) / 8200
+        # Since we're using the same weight, this should result in ~0kg
+        raw_readings = post_tare_reading["measures"]
+        tare_offset_kg = loadcell.tare_offset / 8200  # Convert back to kg for verification
+        
+        # Each measure should be approximately: (raw_reading - tare_offset) / 8200
+        for measure in raw_readings:
+            # The measure should be close to zero since raw_reading ≈ tare_offset
+            # Allow more tolerance for mock noise simulation
+            assert abs(measure) < 0.2, f"Individual measure {measure}kg should be close to 0kg after tare (with mock noise tolerance)"
+    
+    @pytest.mark.asyncio
+    @patch('main.HX711')
+    async def test_tare_mathematical_verification(self, mock_hx711_class):
+        """
+        Test tare functionality with explicit mathematical verification:
+        Verify that: new_reading = (raw_value - tare_offset) / 8200
+        """
+        # Create mock with specific weight
+        mock_hx711 = MockHX711(5, 6, 'A', 64)
+        initial_weight = 3.0  # 3kg
+        mock_hx711.set_simulated_weight(initial_weight)
+        mock_hx711_class.return_value = mock_hx711
+        
+        loadcell = create_test_loadcell()
+        loadcell.doutPin = 5
+        loadcell.sckPin = 6
+        loadcell.gain = 64
+        loadcell.numberOfReadings = 1  # Single reading for easier calculation
+        loadcell.tare_offset = 0.0
+        
+        # Step 1: Get raw reading before tare
+        pre_tare_reading = await loadcell.get_readings()
+        pre_tare_weight = pre_tare_reading["weight"]
+        
+        # Verify we get the expected weight
+        assert abs(pre_tare_weight - initial_weight) < 0.2, f"Pre-tare weight should be {initial_weight}kg (with mock noise tolerance)"
+        
+        # Step 2: Perform tare
+        await loadcell.tare()
+        
+        # Verify tare_offset is set correctly
+        expected_tare_offset = initial_weight * 8200
+        assert abs(loadcell.tare_offset - expected_tare_offset) < 1000, f"Tare offset should be {expected_tare_offset} (with mock noise tolerance)"
+        
+        # Step 3: Change the simulated weight to a different value
+        new_weight = 5.0  # 5kg (2kg more than tare)
+        mock_hx711.set_simulated_weight(new_weight)
+        
+        # Step 4: Get reading after weight change
+        post_tare_reading = await loadcell.get_readings()
+        post_tare_weight = post_tare_reading["weight"]
+        
+        # The reading should now be: (new_weight - tare_weight) = (5kg - 3kg) = 2kg
+        expected_difference = new_weight - initial_weight  # 2kg
+        assert abs(post_tare_weight - expected_difference) < 0.2, f"Post-tare reading should be {expected_difference}kg, got {post_tare_weight}kg (with mock noise tolerance)"
+        
+        # Step 5: Verify the mathematical calculation manually
+        # Get the raw measures and verify the calculation
+        measures = post_tare_reading["measures"]
+        tare_offset_kg = loadcell.tare_offset / 8200  # Convert tare_offset back to kg
+        
+        for measure in measures:
+            # The measure should be: (raw_reading - tare_offset) / 8200
+            # Where raw_reading ≈ new_weight * 8200 and tare_offset ≈ initial_weight * 8200
+            # So: measure ≈ ((new_weight * 8200) - (initial_weight * 8200)) / 8200
+            # Simplified: measure ≈ new_weight - initial_weight = 5kg - 3kg = 2kg
+            assert abs(measure - expected_difference) < 0.2, f"Measure {measure}kg should equal {expected_difference}kg (with mock noise tolerance)"
+        
+        print(f"✅ Mathematical verification passed:")
+        print(f"   Initial weight: {initial_weight}kg")
+        print(f"   Tare offset: {tare_offset_kg:.2f}kg")
+        print(f"   New weight: {new_weight}kg") 
+        print(f"   Expected reading: {expected_difference}kg")
+        print(f"   Actual reading: {post_tare_weight:.2f}kg")
+        print(f"   Formula: (raw_value - tare_offset) / 8200 = ({new_weight} - {initial_weight}) = {expected_difference}kg")
+    
+    @pytest.mark.asyncio
+    @patch('main.HX711')
     async def test_tare_handles_hx711_error(self, mock_hx711_class):
         """Test tare error handling."""
         mock_hx711 = MockHX711(5, 6, 'A', 64, SimulationMode.ERROR)
