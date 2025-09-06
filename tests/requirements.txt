@@ -1,0 +1,20 @@
+# Test dependencies for HX711 Loadcell component
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-xdist>=3.0.0  # For parallel test execution
+
+# Mocking and testing utilities
+unittest-mock>=1.0.0
+
+# Code quality tools
+black>=22.0.0
+flake8>=5.0.0
+mypy>=1.0.0
+
+# Performance testing
+pytest-benchmark>=4.0.0
+
+# Coverage reporting
+coverage>=7.0.0
