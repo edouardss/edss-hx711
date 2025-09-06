@@ -1,0 +1,11 @@
+#!/bin/bash
+echo "Activating test environment..."
+source "/home/edss/edss-hx711/.venv/bin/activate"
+echo "Test environment activated!"
+echo ""
+echo "To run tests:"
+echo "  pytest tests/"
+echo "  python tests/run_tests.py"
+echo ""
+echo "To deactivate:"
+echo "  deactivate"

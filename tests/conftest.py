@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from typing import Mapping, Any
 
+# Import the mock HX711 class
 from tests.mock_hx711 import MockHX711, MockHX711Factory, SimulationMode
 
 
@@ -54,12 +55,13 @@ def loadcell_with_mock_hx711(mock_hx711):
         # Import here to avoid circular imports
         from main import Loadcell
         
-        loadcell = Loadcell()
+        loadcell = Loadcell(name="test_loadcell")
         loadcell.doutPin = 5
         loadcell.sckPin = 6
         loadcell.gain = 64
         loadcell.numberOfReadings = 3
         loadcell.tare_offset = 0.0
+        loadcell.logger = MagicMock()  # Mock logger
         
         yield loadcell
 
@@ -72,12 +74,13 @@ def loadcell_with_normal_hx711(mock_hx711_normal):
         
         from main import Loadcell
         
-        loadcell = Loadcell()
+        loadcell = Loadcell(name="test_loadcell")
         loadcell.doutPin = 5
         loadcell.sckPin = 6
         loadcell.gain = 64
         loadcell.numberOfReadings = 3
         loadcell.tare_offset = 0.0
+        loadcell.logger = MagicMock()  # Mock logger
         
         yield loadcell
 
@@ -90,12 +93,13 @@ def loadcell_with_error_prone_hx711(mock_hx711_error_prone):
         
         from main import Loadcell
         
-        loadcell = Loadcell()
+        loadcell = Loadcell(name="test_loadcell")
         loadcell.doutPin = 5
         loadcell.sckPin = 6
         loadcell.gain = 64
         loadcell.numberOfReadings = 3
         loadcell.tare_offset = 0.0
+        loadcell.logger = MagicMock()  # Mock logger
         
         yield loadcell
 
@@ -133,7 +137,7 @@ def invalid_config():
     """Fixture providing an invalid ComponentConfig."""
     config = MagicMock()
     config.attributes.fields = {
-        "gain": MagicMock(HasField=lambda x: x == "number_value", HasField=False)
+        "gain": MagicMock(HasField=lambda x: False)
     }
     return config
 
