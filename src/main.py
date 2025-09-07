@@ -78,7 +78,7 @@ class Loadcell(Sensor, EasyResource):
                 )
                 # Reset the HX711 only when first created
                 self.hx711.reset()
-                self.logger.info("HX711 initialized and reset successfully")
+                self.logger.debug("HX711 initialized and reset successfully")
             except Exception as e:
                 self.logger.error(f"Failed to initialize HX711: {e}")
                 # Clean up the failed object
@@ -106,7 +106,7 @@ class Loadcell(Sensor, EasyResource):
                 del self.hx711
                 self.hx711 = None
             self.cleanup_gpio_pins()
-            self.logger.info("Load cell component closed and resources cleaned up")
+            self.logger.debug("Load cell component closed and resources cleaned up")
         except Exception as e:
             self.logger.warning(f"Error during component cleanup: {e}")
 
@@ -155,7 +155,7 @@ class Loadcell(Sensor, EasyResource):
             hx711 = self.get_hx711()
             measures = hx711.get_raw_data(times=self.numberOfReadings)
             self.tare_offset = sum(measures) / len(measures)  # Set tare offset
-            self.logger.info(f"Tare completed. New offset: {self.tare_offset}")
+            self.logger.debug(f"Tare completed. New offset: {self.tare_offset}")
         except Exception as e:
             self.logger.error(f"Error during tare operation: {e}")
             # If there's an error, clean up and reset the HX711 object for next time
