@@ -56,6 +56,8 @@ class Loadcell(Sensor, EasyResource):
         self.numberOfReadings = int(attrs.get("numberOfReadings", 3))
         self.tare_offset = float(attrs.get("tare_offset", 0.0))
         
+        self.logger.debug(f"Reconfigured with gain {self.gain}, doutPin {self.doutPin}, sckPin {self.sckPin}, numberOfReadings {self.numberOfReadings}, tare_offset {self.tare_offset}")
+       
         # Initialize HX711 object if not already done
         if not hasattr(self, 'hx711') or self.hx711 is None:
             self.hx711 = None
@@ -67,6 +69,7 @@ class Loadcell(Sensor, EasyResource):
         """Get the HX711 instance, creating it if necessary."""
         if self.hx711 is None:
             try:
+                self.logger.debug(f"Initializing HX711 with doutPin {self.doutPin}, sckPin {self.sckPin}, gain {self.gain}")
                 self.hx711 = HX711(
                     dout_pin=self.doutPin,
                     pd_sck_pin=self.sckPin,
@@ -91,6 +94,7 @@ class Loadcell(Sensor, EasyResource):
     def cleanup_gpio_pins(self):
         """Clean up only the specific GPIO pins used by this sensor."""
         try:
+            self.logger.debug(f"Cleaning up GPIO pins {self.doutPin}, {self.sckPin}")
             GPIO.cleanup((self.doutPin, self.sckPin))
         except Exception as e:
             self.logger.warning(f"Error cleaning up GPIO pins {self.doutPin}, {self.sckPin}: {e}")
@@ -115,6 +119,7 @@ class Loadcell(Sensor, EasyResource):
     ) -> Mapping[str, SensorReading]:
         
         try:
+            self.logger.debug("Getting readings from load cell")
             hx711 = self.get_hx711()
             measures = hx711.get_raw_data(times=self.numberOfReadings)
             # Convert each measure to kgs by subtracting tare offset and dividing by 8200
@@ -146,6 +151,7 @@ class Loadcell(Sensor, EasyResource):
         """Tare the load cell by setting the current reading as the zero offset."""
         
         try:
+            self.logger.debug("Taring load cell")
             hx711 = self.get_hx711()
             measures = hx711.get_raw_data(times=self.numberOfReadings)
             self.tare_offset = sum(measures) / len(measures)  # Set tare offset
