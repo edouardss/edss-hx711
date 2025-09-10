@@ -178,12 +178,9 @@ class Loadcell(Sensor, EasyResource):
             for (name, args) in command.items():
                 if name == "tare":
                     await self.tare(*args)
-                    result[name] = self.tare_offset / 8200
-            
-            self.logger.debug(f"tare command debug: {result}")
-            self.logger.info(f"tare command info: {result}")
-            self.logger.warning(f"tare command warning: {result}")
-            self.logger.error(f"tare command error: {result}")
+                    result[name] = self.tare_offset / 8200            
+                    self.logger.debug(f"tare command debug: {result}")
+
 
             return result
 
