@@ -1,0 +1,13 @@
+{
+    "git.defaultCloneDirectory": "",
+    "git.enableSmartCommit": true,
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "git.enableCommitSigning": false,
+    "terminal.integrated.env.linux": {
+        "GIT_AUTHOR_NAME": "edouardss",
+        "GIT_AUTHOR_EMAIL": "edouardss@gmail.com",
+        "GIT_COMMITTER_NAME": "edouardss",
+        "GIT_COMMITTER_EMAIL": "edouardss@gmail.com"
+    }
+}
