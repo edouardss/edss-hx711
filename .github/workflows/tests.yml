@@ -82,7 +82,7 @@ jobs:
     - name: Run security scan
       run: |
         .venv/bin/pip install safety bandit
-        .venv/bin/safety check -r requirements.txt -r tests/requirements.txt
+        .venv/bin/safety check -r requirements.txt -r requirements-dev.txt
         .venv/bin/bandit -r src/ -f json -o bandit-report.json || true
     
     - name: Upload security scan results
