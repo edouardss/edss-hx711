@@ -11,7 +11,7 @@ from google.protobuf.struct_pb2 import Value
 from viam.resource.types import Model, ModelFamily
 
 # Import your module - adjust if your structure is different
-from main import Loadcell
+from src.main import Loadcell
 
 
 class TestLoadcellBasics:
@@ -171,6 +171,10 @@ class TestHX711Hardware:
     def test_get_hx711_initialization(self, loadcell_sensor, mock_hx711_library):
         """Test HX711 initialization"""
         mock_class, mock_instance = mock_hx711_library
+        
+        # Reset mock call counts to start fresh
+        mock_class.reset_mock()
+        mock_instance.reset_mock()
         
         # Force re-initialization by setting hx711 to None
         loadcell_sensor.hx711 = None
