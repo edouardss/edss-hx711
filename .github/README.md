@@ -9,7 +9,7 @@ Runs on every push and pull request to `main` and `develop` branches.
 
 **Features:**
 - **Raspberry Pi focused**: Ubuntu Linux only (simulates Raspberry Pi environment)
-- **Multi-version Python**: 3.9, 3.10, 3.11, 3.12 (common on Raspberry Pi)
+- **Python 3.11**: Current stable version with full dependency support
 - **Comprehensive test suite**:
   - Unit tests (61 tests)
   - Integration tests (10 tests)
