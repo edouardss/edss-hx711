@@ -1,796 +1,383 @@
-"""
-Comprehensive unit tests for the Loadcell component.
-Tests all functionality using MockHX711 simulation.
-"""
+# Copy the content from the test_loadcell.py artifact I provided above
+# tests/test_loadcell.py
+"""Unit tests for HX711 Loadcell Viam module"""
 
 import pytest
+from unittest.mock import Mock, patch, MagicMock
 import asyncio
-from unittest.mock import patch, MagicMock, call
-from typing import Mapping, Any
+from viam.proto.app.robot import ComponentConfig
+from viam.proto.common import Struct, Value
+from viam.resource.types import Model, ModelFamily
 
-# Import the component under test
-import sys
-import os
-from pathlib import Path
-
-# Add src directory to Python path
-project_root = Path(__file__).parent.parent
-src_dir = project_root / "src"
-sys.path.insert(0, str(src_dir))
-
+# Import your module - adjust if your structure is different
 from main import Loadcell
-from tests.mock_hx711 import MockHX711, MockHX711Factory, SimulationMode
 
 
-def create_test_loadcell():
-    """Create a Loadcell instance for testing."""
-    loadcell = Loadcell(name="test_loadcell")
-    loadcell.doutPin = 5
-    loadcell.sckPin = 6
-    loadcell.gain = 64
-    loadcell.numberOfReadings = 3
-    loadcell.tare_offset = 0.0
-    loadcell.hx711 = None
-    loadcell.logger = MagicMock()  # Mock logger to avoid Viam logger dependency
-    return loadcell
-
-
-class TestLoadcellConfiguration:
-    """Test configuration validation and reconfiguration."""
+class TestLoadcellBasics:
+    """Test basic functionality and configuration"""
     
-    def test_validate_config_valid_inputs(self):
-        """Test configuration validation with valid inputs."""
-        # Create mock config with valid fields
-        config = MagicMock()
-        config.attributes.fields = {
-            "gain": MagicMock(HasField=lambda x: x == "number_value", number_value=64),
-            "doutPin": MagicMock(HasField=lambda x: x == "number_value", number_value=5),
-            "sckPin": MagicMock(HasField=lambda x: x == "number_value", number_value=6),
-            "numberOfReadings": MagicMock(HasField=lambda x: x == "number_value", number_value=3),
-            "tare_offset": MagicMock(HasField=lambda x: x == "number_value", number_value=0.0)
-        }
-        
-        errors = Loadcell.validate_config(config)
+    def test_model_definition(self):
+        """Test that the model is properly defined"""
+        expected_model = Model(ModelFamily("edss", "hx711-loadcell"), "loadcell")
+        assert Loadcell.MODEL == expected_model
+    
+    def test_validate_config_valid(self, basic_config):
+        """Test config validation with valid configuration"""
+        errors = Loadcell.validate_config(basic_config)
         assert errors == []
     
-    def test_validate_config_missing_gain(self):
-        """Test configuration validation with missing gain."""
-        config = MagicMock()
-        config.attributes.fields = {}
+    @pytest.mark.parametrize("field,expected_error", [
+        ("gain", "Gain must be a valid number"),
+        ("doutPin", "Data Out pin must be a valid number"), 
+        ("sckPin", "Clock pin must be a valid number"),
+        ("numberOfReadings", "Number of readings must be a valid number"),
+        ("tare_offset", "Tare offset must be a valid number"),
+    ])
+    def test_validate_config_invalid(self, field, expected_error):
+        """Test config validation with invalid configurations"""
+        config = ComponentConfig()
+        config.name = "test_loadcell"
         
-        errors = Loadcell.validate_config(config)
-        assert errors == []
-    
-    def test_validate_config_invalid_gain_type(self):
-        """Test configuration validation with invalid gain type."""
-        config = MagicMock()
-        config.attributes.fields = {
-            "gain": MagicMock(HasField=lambda x: False)
-        }
+        attributes = Struct()
+        attributes.fields[field].string_value = "invalid_string"  # Wrong type
+        config.attributes.CopyFrom(attributes)
         
-        with pytest.raises(Exception, match="Gain must be a valid number"):
+        with pytest.raises(Exception, match=expected_error):
             Loadcell.validate_config(config)
     
-    def test_validate_config_invalid_doutPin_type(self):
-        """Test configuration validation with invalid doutPin type."""
-        config = MagicMock()
-        config.attributes.fields = {
-            "doutPin": MagicMock(HasField=lambda x: False)
-        }
-        
-        with pytest.raises(Exception, match="Data Out pin must be a valid number"):
-            Loadcell.validate_config(config)
+    def test_reconfigure_with_all_attributes(self, loadcell_sensor):
+        """Test sensor reconfiguration with all attributes set"""
+        assert loadcell_sensor.gain == 128
+        assert loadcell_sensor.doutPin == 5
+        assert loadcell_sensor.sckPin == 6
+        assert loadcell_sensor.numberOfReadings == 3
+        assert loadcell_sensor.tare_offset == 0.0
     
-    def test_validate_config_invalid_sckPin_type(self):
-        """Test configuration validation with invalid sckPin type."""
-        config = MagicMock()
-        config.attributes.fields = {
-            "sckPin": MagicMock(HasField=lambda x: False)
-        }
+    def test_reconfigure_with_defaults(self, minimal_config, mock_hx711_library, mock_gpio):
+        """Test reconfiguration uses default values when attributes missing"""
+        mock_class, mock_instance = mock_hx711_library
+        sensor = Loadcell.new(minimal_config, dependencies={})
         
-        with pytest.raises(Exception, match="Gain must be a valid number"):
-            Loadcell.validate_config(config)
-    
-    def test_validate_config_invalid_numberOfReadings_type(self):
-        """Test configuration validation with invalid numberOfReadings type."""
-        config = MagicMock()
-        config.attributes.fields = {
-            "numberOfReadings": MagicMock(HasField=lambda x: False)
-        }
-        
-        with pytest.raises(Exception, match="Gain must be a valid number"):
-            Loadcell.validate_config(config)
-    
-    def test_validate_config_invalid_tare_offset_type(self):
-        """Test configuration validation with invalid tare_offset type."""
-        config = MagicMock()
-        config.attributes.fields = {
-            "tare_offset": MagicMock(HasField=lambda x: False)
-        }
-        
-        with pytest.raises(Exception, match="Tare offset must be a valid number"):
-            Loadcell.validate_config(config)
+        # Should use defaults from your code
+        assert sensor.gain == 64.0    # Default from your code
+        assert sensor.doutPin == 5     # Default
+        assert sensor.sckPin == 6      # Default  
+        assert sensor.numberOfReadings == 3  # Default
+        assert sensor.tare_offset == 0.0     # Default
 
 
-class TestLoadcellReconfiguration:
-    """Test component reconfiguration functionality."""
+class TestHX711Hardware:
+    """Test HX711 hardware interaction (mocked)"""
     
-    @patch('main.HX711')
-    def test_reconfigure_with_all_parameters(self, mock_hx711_class):
-        """Test reconfiguration with all parameters provided."""
-        mock_hx711_class.return_value = MockHX711(5, 6, 'A', 64)
+    def test_get_hx711_initialization(self, loadcell_sensor, mock_hx711_library):
+        """Test HX711 initialization"""
+        mock_class, mock_instance = mock_hx711_library
         
-        loadcell = create_test_loadcell()
-        config = MagicMock()
-        config.attributes = MagicMock()
+        # Force re-initialization by setting hx711 to None
+        loadcell_sensor.hx711 = None
         
-        # Mock struct_to_dict to return test values
-        with patch('main.struct_to_dict') as mock_struct_to_dict:
-            mock_struct_to_dict.return_value = {
-                "gain": 128,
-                "doutPin": 7,
-                "sckPin": 8,
-                "numberOfReadings": 5,
-                "tare_offset": 100.0
-            }
-            
-            loadcell.reconfigure(config, {})
-            
-            assert loadcell.gain == 128
-            assert loadcell.doutPin == 7
-            assert loadcell.sckPin == 8
-            assert loadcell.numberOfReadings == 5
-            assert loadcell.tare_offset == 100.0
-    
-    @patch('main.HX711')
-    def test_reconfigure_with_default_values(self, mock_hx711_class):
-        """Test reconfiguration with default values."""
-        mock_hx711_class.return_value = MockHX711(5, 6, 'A', 64)
+        hx711 = loadcell_sensor.get_hx711()
         
-        loadcell = create_test_loadcell()
-        config = MagicMock()
-        config.attributes = MagicMock()
-        
-        with patch('main.struct_to_dict') as mock_struct_to_dict:
-            mock_struct_to_dict.return_value = {}
-            
-            loadcell.reconfigure(config, {})
-            
-            assert loadcell.gain == 64
-            assert loadcell.doutPin == 5
-            assert loadcell.sckPin == 6
-            assert loadcell.numberOfReadings == 3
-            assert loadcell.tare_offset == 0.0
-
-
-class TestLoadcellHX711Management:
-    """Test HX711 object management."""
-    
-    @patch('main.HX711')
-    def test_get_hx711_creates_new_instance_when_none(self, mock_hx711_class):
-        """Test that get_hx711 creates new instance when none exists."""
-        mock_hx711_class.return_value = MockHX711(5, 6, 'A', 64)
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.hx711 = None
-        
-        hx711 = loadcell.get_hx711()
-        
-        assert hx711 is not None
-        assert loadcell.hx711 is hx711
-        mock_hx711_class.assert_called_once_with(
-            dout_pin=5, pd_sck_pin=6, channel='A', gain=64
+        # Verify HX711 was created with correct parameters
+        mock_class.assert_called_with(
+            dout_pin=5,
+            pd_sck_pin=6,
+            channel='A',
+            gain=128
         )
+        mock_instance.reset.assert_called_once()
+        assert hx711 == mock_instance
     
-    @patch('main.HX711')
-    def test_get_hx711_returns_existing_instance(self, mock_hx711_class):
-        """Test that get_hx711 returns existing instance."""
-        existing_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711_class.return_value = existing_hx711
+    def test_get_hx711_reuse_existing(self, loadcell_sensor, mock_hx711_library):
+        """Test that get_hx711 reuses existing instance"""
+        mock_class, mock_instance = mock_hx711_library
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.hx711 = existing_hx711
+        # First call
+        hx711_1 = loadcell_sensor.get_hx711()
+        # Second call  
+        hx711_2 = loadcell_sensor.get_hx711()
         
-        hx711 = loadcell.get_hx711()
-        
-        assert hx711 is existing_hx711
-        mock_hx711_class.assert_not_called()
+        # Should be the same instance
+        assert hx711_1 == hx711_2 == mock_instance
+        # Constructor should only be called once during setup
     
-    @patch('main.HX711')
-    def test_get_hx711_handles_initialization_failure(self, mock_hx711_class):
-        """Test that get_hx711 handles initialization failure."""
-        mock_hx711_class.side_effect = Exception("Hardware initialization failed")
+    def test_get_hx711_initialization_failure(self, loadcell_sensor, mock_hx711_library):
+        """Test HX711 initialization failure handling"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_class.side_effect = Exception("Hardware initialization failed")
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.hx711 = None
+        # Force re-initialization
+        loadcell_sensor.hx711 = None
         
         with pytest.raises(Exception, match="Hardware initialization failed"):
-            loadcell.get_hx711()
+            loadcell_sensor.get_hx711()
         
-        assert loadcell.hx711 is None
-    
-    @patch('main.HX711')
-    def test_get_hx711_cleans_up_on_failure(self, mock_hx711_class):
-        """Test that get_hx711 cleans up on failure."""
-        # Create a mock that fails after partial initialization
-        mock_instance = MagicMock()
-        mock_hx711_class.return_value = mock_instance
-        mock_hx711_class.side_effect = Exception("Partial initialization")
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.hx711 = None
-        
-        with pytest.raises(Exception):
-            loadcell.get_hx711()
-        
-        assert loadcell.hx711 is None
+        # Should clean up and set hx711 to None
+        assert loadcell_sensor.hx711 is None
 
 
-class TestLoadcellGPIO:
-    """Test GPIO cleanup functionality."""
+class TestWeightReadings:
+    """Test weight reading functionality"""
     
-    @patch('main.GPIO')
-    def test_cleanup_gpio_pins_success(self, mock_gpio):
-        """Test successful GPIO cleanup."""
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
+    @pytest.mark.asyncio
+    async def test_get_readings_success(self, loadcell_sensor, mock_hx711_library):
+        """Test successful weight readings"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.return_value = [82000, 82100, 81900]
         
-        loadcell.cleanup_gpio_pins()
+        readings = await loadcell_sensor.get_readings()
         
-        mock_gpio.cleanup.assert_called_once_with((5, 6))
+        # Verify the readings structure
+        expected_keys = ["doutPin", "sckPin", "gain", "numberOfReadings", 
+                        "tare_offset", "measures", "weight"]
+        for key in expected_keys:
+            assert key in readings
+        
+        # Check specific values
+        assert readings["doutPin"] == 5
+        assert readings["sckPin"] == 6  
+        assert readings["gain"] == 128
+        assert readings["numberOfReadings"] == 3
+        
+        # Check weight calculation: average of readings converted to kg
+        # (82000 - 0) / 8200 ≈ 10.0 kg
+        expected_weight = 82000 / 8200  # No tare offset
+        assert abs(readings["weight"] - expected_weight) < 0.01
+        
+        # Check that measures are converted to kg
+        assert len(readings["measures"]) == 3
+        expected_measures = [82000/8200, 82100/8200, 81900/8200]
+        for i, measure in enumerate(readings["measures"]):
+            assert abs(measure - expected_measures[i]) < 0.001
+        
+        # Verify HX711 was called correctly
+        mock_instance.get_raw_data.assert_called_with(times=3)
     
-    @patch('main.GPIO')
-    def test_cleanup_gpio_pins_handles_gpio_error(self, mock_gpio):
-        """Test GPIO cleanup error handling."""
-        mock_gpio.cleanup.side_effect = Exception("GPIO cleanup failed")
+    @pytest.mark.asyncio 
+    async def test_get_readings_with_tare_offset(self, loadcell_sensor, mock_hx711_library):
+        """Test readings with tare offset applied"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.return_value = [90000, 90100, 89900]
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
+        # Set tare offset (equivalent to 1kg)
+        loadcell_sensor.tare_offset = 8200.0
         
-        # Should not raise exception
-        loadcell.cleanup_gpio_pins()
+        readings = await loadcell_sensor.get_readings()
         
-        mock_gpio.cleanup.assert_called_once_with((5, 6))
+        # Weight should account for tare offset
+        # (90000 - 8200) / 8200 ≈ 9.976 kg
+        expected_weight = (90000 - 8200) / 8200
+        assert abs(readings["weight"] - expected_weight) < 0.01
+        
+        # Tare offset should be reported in kg for consistency
+        assert abs(readings["tare_offset"] - 1.0) < 0.001
+    
+    @pytest.mark.asyncio
+    async def test_get_readings_negative_weight(self, loadcell_sensor, mock_hx711_library):
+        """Test handling of negative weight readings"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.return_value = [-1000, -1100, -900]
+        
+        readings = await loadcell_sensor.get_readings()
+        
+        # Should handle negative values correctly
+        expected_weight = -1000 / 8200  # Negative weight
+        assert abs(readings["weight"] - expected_weight) < 0.001
+        assert readings["weight"] < 0
+    
+    @pytest.mark.asyncio
+    async def test_get_readings_hardware_error(self, loadcell_sensor, mock_hx711_library):
+        """Test error handling during readings"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.side_effect = Exception("Sensor communication error")
+        
+        with pytest.raises(Exception, match="Sensor communication error"):
+            await loadcell_sensor.get_readings()
+        
+        # Should clean up HX711 instance on error
+        assert loadcell_sensor.hx711 is None
 
 
-class TestLoadcellLifecycle:
-    """Test component lifecycle management."""
+class TestTareFunctionality:
+    """Test tare (zero) functionality"""
     
-    @patch('main.GPIO')
-    def test_close_cleans_up_resources(self, mock_gpio):
-        """Test that close method cleans up resources."""
-        loadcell = create_test_loadcell()
-        loadcell.hx711 = MockHX711(5, 6, 'A', 64)
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
+    @pytest.mark.asyncio
+    async def test_tare_function(self, loadcell_sensor, mock_hx711_library):
+        """Test tare functionality"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.return_value = [50000, 50100, 49900]
         
-        loadcell.close()
+        await loadcell_sensor.tare()
         
-        assert loadcell.hx711 is None
-        mock_gpio.cleanup.assert_called_once_with((5, 6))
+        # Tare offset should be set to average of readings
+        expected_offset = (50000 + 50100 + 49900) / 3
+        assert abs(loadcell_sensor.tare_offset - expected_offset) < 0.1
+        
+        # Verify get_raw_data was called with correct parameters
+        mock_instance.get_raw_data.assert_called_with(times=3)
     
-    @patch('main.GPIO')
-    def test_close_handles_missing_hx711(self, mock_gpio):
-        """Test close method handles missing HX711 object."""
-        loadcell = create_test_loadcell()
-        loadcell.hx711 = None
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
+    @pytest.mark.asyncio
+    async def test_tare_then_weigh(self, loadcell_sensor, mock_hx711_library):
+        """Test tare then get readings"""
+        mock_class, mock_instance = mock_hx711_library
         
-        # Should not raise exception
-        loadcell.close()
+        # First call for tare
+        mock_instance.get_raw_data.return_value = [50000, 50000, 50000]
+        await loadcell_sensor.tare()
         
-        mock_gpio.cleanup.assert_called_once_with((5, 6))
+        # Second call for reading after tare
+        mock_instance.get_raw_data.return_value = [58200, 58200, 58200]  # +8200 = +1kg
+        readings = await loadcell_sensor.get_readings()
+        
+        # Should show approximately 1kg (58200 - 50000 = 8200, 8200/8200 = 1kg)
+        assert abs(readings["weight"] - 1.0) < 0.01
+    
+    @pytest.mark.asyncio
+    async def test_tare_hardware_error(self, loadcell_sensor, mock_hx711_library):
+        """Test tare error handling"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.side_effect = Exception("Tare communication error")
+        
+        with pytest.raises(Exception, match="Tare communication error"):
+            await loadcell_sensor.tare()
+        
+        # Should clean up HX711 instance on error
+        assert loadcell_sensor.hx711 is None
 
 
-class TestLoadcellReadings:
-    """Test sensor reading functionality."""
+class TestViamIntegration:
+    """Test Viam-specific functionality"""
     
     @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_get_readings_success(self, mock_hx711_class):
-        """Test successful reading operation."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(1.0)  # 1kg
-        mock_hx711_class.return_value = mock_hx711
+    async def test_do_command_tare(self, loadcell_sensor, mock_hx711_library):
+        """Test do_command with tare command"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.return_value = [60000, 60000, 60000]
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
+        command = {"tare": []}  # Empty args for tare
+        result = await loadcell_sensor.do_command(command)
         
-        result = await loadcell.get_readings()
-        
-        assert "weight" in result
-        assert "measures" in result
-        assert "doutPin" in result
-        assert "sckPin" in result
-        assert "gain" in result
-        assert "numberOfReadings" in result
-        assert "tare_offset" in result
-        
-        assert len(result["measures"]) == 3
-        assert abs(result["weight"] - 1.0) < 0.1  # Should be close to 1kg
-        assert result["doutPin"] == 5
-        assert result["sckPin"] == 6
-        assert result["gain"] == 64
-        assert result["numberOfReadings"] == 3
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_get_readings_calculates_measures_correctly(self, mock_hx711_class):
-        """Test that measures are calculated correctly."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(2.0)  # 2kg
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        result = await loadcell.get_readings()
-        
-        # All measures should be close to 2kg
-        for measure in result["measures"]:
-            assert abs(measure - 2.0) < 0.1
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_get_readings_applies_tare_offset(self, mock_hx711_class):
-        """Test that tare offset is applied correctly."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(1.0)  # 1kg
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 8200  # 1kg offset
-        
-        result = await loadcell.get_readings()
-        
-        # With 1kg tare offset, readings should be close to 0kg
-        assert abs(result["weight"]) < 0.1
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_get_readings_handles_hx711_error(self, mock_hx711_class):
-        """Test error handling in get_readings."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64, SimulationMode.ERROR)
-        mock_hx711.set_error_probability(1.0)  # Always error
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        with pytest.raises(Exception):
-            await loadcell.get_readings()
-        
-        # HX711 should be reset to None
-        assert loadcell.hx711 is None
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_get_readings_cleans_up_on_error(self, mock_hx711_class):
-        """Test that get_readings cleans up on error."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64, SimulationMode.ERROR)
-        mock_hx711.set_error_probability(1.0)
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        with pytest.raises(Exception):
-            await loadcell.get_readings()
-        
-        # HX711 should be cleaned up
-        assert loadcell.hx711 is None
-
-
-class TestLoadcellTare:
-    """Test tare functionality."""
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_tare_success(self, mock_hx711_class):
-        """Test successful tare operation."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(1.5)  # 1.5kg
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        await loadcell.tare()
-        
-        # Tare offset should be set to approximately 1.5kg in raw units
-        expected_offset = 1.5 * 8200
-        assert abs(loadcell.tare_offset - expected_offset) < 500  # Allow some tolerance for mock variations
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_tare_calculates_offset_correctly(self, mock_hx711_class):
-        """Test that tare calculates offset correctly."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(2.0)  # 2kg
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 5
-        loadcell.tare_offset = 0.0
-        
-        await loadcell.tare()
-        
-        # Tare offset should be close to 2kg in raw units
-        expected_offset = 2.0 * 8200
-        assert abs(loadcell.tare_offset - expected_offset) < 200  # Allow some tolerance
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_tare_complete_workflow(self, mock_hx711_class):
-        """
-        Test complete tare workflow:
-        1. Simulation sends non-zero reading
-        2. Tare function is called and sets tare value to the reading
-        3. New reading is called and value should be (raw_value - tare_offset)
-        """
-        # Create mock HX711 with a specific weight simulation
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        test_weight = 2.5  # 2.5kg
-        mock_hx711.set_simulated_weight(test_weight)
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0  # Start with no tare offset
-        
-        # Step 1: Get initial reading (should show the test weight)
-        initial_reading = await loadcell.get_readings()
-        initial_weight = initial_reading["weight"]
-        
-        # Verify initial reading is approximately the test weight
-        assert abs(initial_weight - test_weight) < 0.2, f"Initial reading {initial_weight}kg should be close to {test_weight}kg (with mock noise tolerance)"
-        
-        # Step 2: Call tare function - this should set tare_offset to the current reading
-        await loadcell.tare()
-        
-        # Verify tare_offset is set to approximately the test weight in raw units
-        expected_tare_offset = test_weight * 8200  # Convert kg to raw units
-        assert abs(loadcell.tare_offset - expected_tare_offset) < 1000, f"Tare offset {loadcell.tare_offset} should be close to {expected_tare_offset} (with mock noise tolerance)"
-        
-        # Step 3: Get new reading after tare - should now be close to zero
-        post_tare_reading = await loadcell.get_readings()
-        post_tare_weight = post_tare_reading["weight"]
-        
-        # The new reading should be close to zero since we tared at the current weight
-        assert abs(post_tare_weight) < 0.2, f"Post-tare reading {post_tare_weight}kg should be close to 0kg (with mock noise tolerance)"
-        
-        # Verify the calculation: (raw_value - tare_offset) / 8200
-        # Since we're using the same weight, this should result in ~0kg
-        raw_readings = post_tare_reading["measures"]
-        tare_offset_kg = loadcell.tare_offset / 8200  # Convert back to kg for verification
-        
-        # Each measure should be approximately: (raw_reading - tare_offset) / 8200
-        for measure in raw_readings:
-            # The measure should be close to zero since raw_reading ≈ tare_offset
-            # Allow more tolerance for mock noise simulation
-            assert abs(measure) < 0.2, f"Individual measure {measure}kg should be close to 0kg after tare (with mock noise tolerance)"
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_tare_mathematical_verification(self, mock_hx711_class):
-        """
-        Test tare functionality with explicit mathematical verification:
-        Verify that: new_reading = (raw_value - tare_offset) / 8200
-        """
-        # Create mock with specific weight
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        initial_weight = 3.0  # 3kg
-        mock_hx711.set_simulated_weight(initial_weight)
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 1  # Single reading for easier calculation
-        loadcell.tare_offset = 0.0
-        
-        # Step 1: Get raw reading before tare
-        pre_tare_reading = await loadcell.get_readings()
-        pre_tare_weight = pre_tare_reading["weight"]
-        
-        # Verify we get the expected weight
-        assert abs(pre_tare_weight - initial_weight) < 0.2, f"Pre-tare weight should be {initial_weight}kg (with mock noise tolerance)"
-        
-        # Step 2: Perform tare
-        await loadcell.tare()
-        
-        # Verify tare_offset is set correctly
-        expected_tare_offset = initial_weight * 8200
-        assert abs(loadcell.tare_offset - expected_tare_offset) < 1000, f"Tare offset should be {expected_tare_offset} (with mock noise tolerance)"
-        
-        # Step 3: Change the simulated weight to a different value
-        new_weight = 5.0  # 5kg (2kg more than tare)
-        mock_hx711.set_simulated_weight(new_weight)
-        
-        # Step 4: Get reading after weight change
-        post_tare_reading = await loadcell.get_readings()
-        post_tare_weight = post_tare_reading["weight"]
-        
-        # The reading should now be: (new_weight - tare_weight) = (5kg - 3kg) = 2kg
-        expected_difference = new_weight - initial_weight  # 2kg
-        assert abs(post_tare_weight - expected_difference) < 0.2, f"Post-tare reading should be {expected_difference}kg, got {post_tare_weight}kg (with mock noise tolerance)"
-        
-        # Step 5: Verify the mathematical calculation manually
-        # Get the raw measures and verify the calculation
-        measures = post_tare_reading["measures"]
-        tare_offset_kg = loadcell.tare_offset / 8200  # Convert tare_offset back to kg
-        
-        for measure in measures:
-            # The measure should be: (raw_reading - tare_offset) / 8200
-            # Where raw_reading ≈ new_weight * 8200 and tare_offset ≈ initial_weight * 8200
-            # So: measure ≈ ((new_weight * 8200) - (initial_weight * 8200)) / 8200
-            # Simplified: measure ≈ new_weight - initial_weight = 5kg - 3kg = 2kg
-            assert abs(measure - expected_difference) < 0.2, f"Measure {measure}kg should equal {expected_difference}kg (with mock noise tolerance)"
-        
-        print(f"✅ Mathematical verification passed:")
-        print(f"   Initial weight: {initial_weight}kg")
-        print(f"   Tare offset: {tare_offset_kg:.2f}kg")
-        print(f"   New weight: {new_weight}kg") 
-        print(f"   Expected reading: {expected_difference}kg")
-        print(f"   Actual reading: {post_tare_weight:.2f}kg")
-        print(f"   Formula: (raw_value - tare_offset) / 8200 = ({new_weight} - {initial_weight}) = {expected_difference}kg")
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_tare_handles_hx711_error(self, mock_hx711_class):
-        """Test tare error handling."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64, SimulationMode.ERROR)
-        mock_hx711.set_error_probability(1.0)
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        with pytest.raises(Exception):
-            await loadcell.tare()
-        
-        # HX711 should be reset to None
-        assert loadcell.hx711 is None
-
-
-class TestLoadcellCommands:
-    """Test command handling functionality."""
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_do_command_tare_success(self, mock_hx711_class):
-        """Test successful tare command."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(1.0)  # 1kg
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        command = {"tare": []}
-        result = await loadcell.do_command(command)
-        
+        # Should return the tare offset in kg
         assert "tare" in result
-        assert result["tare"] > 0  # Should return the tare offset in kg
+        expected_tare_kg = 60000 / 8200  # Convert to kg
+        assert abs(result["tare"] - expected_tare_kg) < 0.001
     
     @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_do_command_unknown_command_ignored(self, mock_hx711_class):
-        """Test that unknown commands are ignored."""
-        mock_hx711_class.return_value = MockHX711(5, 6, 'A', 64)
+    async def test_do_command_unknown_command(self, loadcell_sensor):
+        """Test do_command with unknown command"""
+        command = {"unknown_command": [], "another_unknown": []}
+        result = await loadcell_sensor.do_command(command)
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        command = {"unknown_command": []}
-        result = await loadcell.do_command(command)
-        
-        assert "unknown_command" in result
+        # Should return False for unknown commands
         assert result["unknown_command"] is False
+        assert result["another_unknown"] is False
     
     @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_do_command_multiple_commands(self, mock_hx711_class):
-        """Test handling multiple commands."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(1.0)
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
+    async def test_do_command_multiple_commands(self, loadcell_sensor, mock_hx711_library):
+        """Test do_command with multiple commands"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.return_value = [45000, 45000, 45000]
         
         command = {"tare": [], "unknown": []}
-        result = await loadcell.do_command(command)
+        result = await loadcell_sensor.do_command(command)
         
-        assert "tare" in result
-        assert "unknown" in result
-        assert result["tare"] > 0
+        # Tare should work, unknown should return False
+        assert abs(result["tare"] - (45000/8200)) < 0.001
         assert result["unknown"] is False
 
 
-class TestLoadcellIntegration:
-    """Integration tests for the complete workflow."""
+class TestResourceManagement:
+    """Test resource cleanup and management"""
     
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_full_workflow_readings_and_tare(self, mock_hx711_class):
-        """Test complete workflow: tare then readings."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(1.0)  # 1kg
-        mock_hx711_class.return_value = mock_hx711
+    def test_cleanup_gpio_pins(self, loadcell_sensor, mock_gpio):
+        """Test GPIO cleanup"""
+        loadcell_sensor.cleanup_gpio_pins()
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        # First, perform tare
-        await loadcell.tare()
-        tare_offset = loadcell.tare_offset
-        
-        # Then get readings - should be close to zero after tare
-        result = await loadcell.get_readings()
-        
-        assert abs(result["weight"]) < 0.1  # Should be close to zero
-        assert tare_offset > 0  # Tare offset should be set
+        # Should call GPIO.cleanup with the specific pins
+        mock_gpio.cleanup.assert_called_once_with((5, 6))
     
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_error_recovery_after_failure(self, mock_hx711_class):
-        """Test that component recovers after error."""
-        # First call fails, second call succeeds
-        mock_hx711_fail = MockHX711(5, 6, 'A', 64, SimulationMode.ERROR)
-        mock_hx711_fail.set_error_probability(1.0)
+    def test_cleanup_gpio_error_handling(self, loadcell_sensor, mock_gpio):
+        """Test GPIO cleanup error handling"""
+        mock_gpio.cleanup.side_effect = Exception("GPIO cleanup failed")
         
-        mock_hx711_success = MockHX711(5, 6, 'A', 64)
-        mock_hx711_success.set_simulated_weight(1.0)
+        # Should not raise exception, just log warning
+        loadcell_sensor.cleanup_gpio_pins()
         
-        mock_hx711_class.side_effect = [mock_hx711_fail, mock_hx711_success]
+        # Verify it tried to cleanup
+        mock_gpio.cleanup.assert_called_once_with((5, 6))
+    
+    def test_close_cleanup(self, loadcell_sensor, mock_gpio):
+        """Test component cleanup on close"""
+        # Set up HX711 instance
+        loadcell_sensor.hx711 = Mock()
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
+        loadcell_sensor.close()
         
-        # First call should fail
-        with pytest.raises(Exception):
-            await loadcell.get_readings()
+        # Should clean up HX711 and GPIO
+        assert loadcell_sensor.hx711 is None
+        mock_gpio.cleanup.assert_called_once_with((5, 6))
+    
+    def test_close_with_cleanup_errors(self, loadcell_sensor, mock_gpio):
+        """Test close handles cleanup errors gracefully"""
+        loadcell_sensor.hx711 = Mock()
+        mock_gpio.cleanup.side_effect = Exception("Cleanup error")
         
-        # HX711 should be reset
-        assert loadcell.hx711 is None
+        # Should not raise exception
+        loadcell_sensor.close()
         
-        # Second call should succeed (new HX711 will be created)
-        result = await loadcell.get_readings()
-        assert "weight" in result
+        # Should still clean up what it can
+        assert loadcell_sensor.hx711 is None
 
 
-class TestLoadcellEdgeCases:
-    """Test edge cases and error conditions."""
+class TestEdgeCasesAndCalculations:
+    """Test edge cases and calculation accuracy"""
+    
+    @pytest.mark.parametrize("raw_readings,tare_offset,expected_weight", [
+        ([82000, 82000, 82000], 0, 10.0),           # 82000/8200 = 10kg
+        ([0, 0, 0], 0, 0.0),                        # Zero weight
+        ([164000, 164000, 164000], 0, 20.0),        # 20kg
+        ([90200, 90200, 90200], 8200, 10.0),        # 10kg after 1kg tare
+        ([-8200, -8200, -8200], 0, -1.0),           # Negative weight
+    ])
+    @pytest.mark.asyncio
+    async def test_weight_calculations(self, loadcell_sensor, mock_hx711_library, 
+                                      raw_readings, tare_offset, expected_weight):
+        """Test weight calculation accuracy with various inputs"""
+        mock_class, mock_instance = mock_hx711_library
+        mock_instance.get_raw_data.return_value = raw_readings
+        loadcell_sensor.tare_offset = tare_offset
+        
+        readings = await loadcell_sensor.get_readings()
+        
+        assert abs(readings["weight"] - expected_weight) < 0.01
     
     @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_division_by_zero_protection(self, mock_hx711_class):
-        """Test protection against division by zero."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(0.0)  # Zero weight
-        mock_hx711_class.return_value = mock_hx711
+    async def test_varying_number_of_readings(self, basic_config, mock_hx711_library, mock_gpio):
+        """Test different numberOfReadings values"""
+        mock_class, mock_instance = mock_hx711_library
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
+        # Test with 5 readings
+        basic_config.attributes.fields["numberOfReadings"].number_value = 5
+        sensor = Loadcell.new(basic_config, dependencies={})
         
-        # Should not raise division by zero error
-        result = await loadcell.get_readings()
-        assert "weight" in result
-        assert result["weight"] == 0.0
+        mock_instance.get_raw_data.return_value = [80000, 81000, 82000, 83000, 84000]
+        readings = await sensor.get_readings()
+        
+        assert len(readings["measures"]) == 5
+        assert readings["numberOfReadings"] == 5
+        
+        # Verify get_raw_data called with correct times parameter
+        mock_instance.get_raw_data.assert_called_with(times=5)
     
     @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_negative_measurements(self, mock_hx711_class):
-        """Test handling of negative measurements."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(-0.5)  # Negative weight
-        mock_hx711_class.return_value = mock_hx711
+    async def test_large_weight_values(self, loadcell_sensor, mock_hx711_library):
+        """Test handling of large weight values"""
+        mock_class, mock_instance = mock_hx711_library
+        large_values = [8200000, 8210000, 8190000]  # ~1000kg
+        mock_instance.get_raw_data.return_value = large_values
         
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
+        readings = await loadcell_sensor.get_readings()
         
-        result = await loadcell.get_readings()
-        assert "weight" in result
-        assert result["weight"] < 0  # Should handle negative weights
-    
-    @pytest.mark.asyncio
-    @patch('main.HX711')
-    async def test_extremely_large_measurements(self, mock_hx711_class):
-        """Test handling of extremely large measurements."""
-        mock_hx711 = MockHX711(5, 6, 'A', 64)
-        mock_hx711.set_simulated_weight(1000.0)  # Very large weight
-        mock_hx711_class.return_value = mock_hx711
-        
-        loadcell = create_test_loadcell()
-        loadcell.doutPin = 5
-        loadcell.sckPin = 6
-        loadcell.gain = 64
-        loadcell.numberOfReadings = 3
-        loadcell.tare_offset = 0.0
-        
-        result = await loadcell.get_readings()
-        assert "weight" in result
-        assert result["weight"] > 0  # Should handle large weights
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        # Should handle large values correctly
+        expected_weight = 8200000 / 8200  # ~1000kg
+        assert abs(readings["weight"] - expected_weight) < 1.0  # Within 1kg tolerance
