@@ -22,7 +22,7 @@ def run_command(cmd, description):
 
 def run_unit_tests(coverage=False, verbose=False):
     """Run unit tests with optional coverage"""
-    cmd = ["python", "-m", "pytest", "tests/test_loadcell.py"]
+    cmd = [sys.executable, "-m", "pytest", "tests/test_loadcell.py"]
     
     if verbose:
         cmd.append("-v")
@@ -34,7 +34,7 @@ def run_unit_tests(coverage=False, verbose=False):
 
 def run_integration_tests(verbose=False):
     """Run integration tests"""
-    cmd = ["python", "-m", "pytest", "tests/test_integration.py"]
+    cmd = [sys.executable, "-m", "pytest", "tests/test_integration.py"]
     
     if verbose:
         cmd.append("-v")
@@ -43,12 +43,12 @@ def run_integration_tests(verbose=False):
 
 def run_linting():
     """Run linting checks"""
-    cmd = ["python", "-m", "flake8", "src/", "tests/"]
+    cmd = [sys.executable, "-m", "flake8", "src/", "tests/"]
     return run_command(cmd, "Linting Checks")
 
 def run_formatting():
     """Run code formatting checks"""
-    cmd = ["python", "-m", "black", "--check", "src/", "tests/"]
+    cmd = [sys.executable, "-m", "black", "--check", "src/", "tests/"]
     return run_command(cmd, "Code Formatting Checks")
 
 def main():
