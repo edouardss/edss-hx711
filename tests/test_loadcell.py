@@ -6,7 +6,8 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 import asyncio
 from viam.proto.app.robot import ComponentConfig
-from viam.proto.common import Struct, Value
+from google.protobuf.struct_pb2 import Struct
+from google.protobuf.struct_pb2 import Value
 from viam.resource.types import Model, ModelFamily
 
 # Import your module - adjust if your structure is different

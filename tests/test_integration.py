@@ -7,7 +7,7 @@ import os
 import sys
 from unittest.mock import patch
 from viam.proto.app.robot import ComponentConfig
-from viam.proto.common import Struct
+from google.protobuf.struct_pb2 import Struct
 
 # Add src directory to Python path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))

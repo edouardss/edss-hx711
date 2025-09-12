@@ -5,7 +5,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from viam.proto.app.robot import ComponentConfig
-from viam.proto.common import Struct
+from google.protobuf.struct_pb2 import Struct
 
 
 @pytest.fixture
