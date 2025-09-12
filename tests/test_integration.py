@@ -137,9 +137,10 @@ class TestErrorHandling:
         config.name = "permission_test"
         config.attributes.CopyFrom(Struct())
         
-        # Mock GPIO to simulate permission error
-        with patch('src.main.GPIO') as mock_gpio:
+        # Mock both GPIO and HX711 to avoid hardware access
+        with patch('src.main.GPIO') as mock_gpio, patch('src.main.HX711') as mock_hx711:
             mock_gpio.cleanup.side_effect = PermissionError("GPIO access denied")
+            mock_hx711.return_value = mock_hx711  # Return self for chaining
             
             sensor = Loadcell.new(config, dependencies={})
             
