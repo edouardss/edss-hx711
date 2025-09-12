@@ -1,5 +1,3 @@
-# Copy the content from the test_integration.py artifact I provided above
-# tests/test_integration.py
 """Integration tests for HX711 Loadcell module"""
 
 import pytest
@@ -8,6 +6,7 @@ import sys
 from unittest.mock import patch
 from viam.proto.app.robot import ComponentConfig
 from google.protobuf.struct_pb2 import Struct
+from viam.resource.registry import Registry
 
 # Add src directory to Python path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -118,8 +117,7 @@ class TestHardwareIntegration:
 class TestErrorHandling:
     """Integration tests for error handling scenarios"""
     
-    @pytest.mark.asyncio
-    async def test_invalid_pin_configuration(self):
+    def test_invalid_pin_configuration(self):
         """Test handling of invalid GPIO pin configuration"""
         config = ComponentConfig()
         config.name = "invalid_pin_test"
@@ -129,14 +127,9 @@ class TestErrorHandling:
         attributes.fields["sckPin"].number_value = 999   # Invalid pin
         config.attributes.CopyFrom(attributes)
         
-        sensor = Loadcell.new(config, dependencies={})
-        
-        # Should handle hardware initialization failure gracefully
-        with pytest.raises(Exception):
-            sensor.get_hx711()
-        
-        # Sensor should be in clean state after failure
-        assert sensor.hx711 is None
+        # Should fail validation before creating sensor
+        with pytest.raises(Exception, match="Data Out pin must be a valid GPIO pin number"):
+            Loadcell.validate_config(config)
     
     def test_gpio_permission_handling(self):
         """Test handling of GPIO permission issues"""
@@ -145,7 +138,7 @@ class TestErrorHandling:
         config.attributes.CopyFrom(Struct())
         
         # Mock GPIO to simulate permission error
-        with patch('main.GPIO') as mock_gpio:
+        with patch('src.main.GPIO') as mock_gpio:
             mock_gpio.cleanup.side_effect = PermissionError("GPIO access denied")
             
             sensor = Loadcell.new(config, dependencies={})
@@ -181,7 +174,7 @@ class TestViamCompliance:
     def test_model_registration(self):
         """Test that model is properly registered"""
         assert hasattr(Loadcell, 'MODEL')
-        assert Loadcell.MODEL.namespace == "edss"
+        assert Loadcell.MODEL.model_family.namespace == "edss"
         assert Loadcell.MODEL.name == "loadcell"
 
 
