@@ -34,8 +34,8 @@ class TestLoadcellBasics:
         ("numberOfReadings", "Number of readings must be a valid number"),
         ("tare_offset", "Tare offset must be a valid number"),
     ])
-    def test_validate_config_invalid(self, field, expected_error):
-        """Test config validation with invalid configurations"""
+    def test_validate_config_invalid_type(self, field, expected_error):
+        """Test config validation with invalid data types"""
         config = ComponentConfig()
         config.name = "test_loadcell"
         
@@ -45,6 +45,104 @@ class TestLoadcellBasics:
         
         with pytest.raises(Exception, match=expected_error):
             Loadcell.validate_config(config)
+    
+    @pytest.mark.parametrize("gain_value,should_pass", [
+        (32, True),
+        (64, True), 
+        (128, True),
+        (16, False),
+        (256, False),
+        (0, False),
+        (-1, False),
+    ])
+    def test_validate_gain_values(self, gain_value, should_pass):
+        """Test gain validation with specific values"""
+        config = ComponentConfig()
+        config.name = "test_loadcell"
+        
+        attributes = Struct()
+        attributes.fields["gain"].number_value = gain_value
+        config.attributes.CopyFrom(attributes)
+        
+        if should_pass:
+            # Should not raise exception
+            Loadcell.validate_config(config)
+        else:
+            with pytest.raises(Exception, match="Gain must be 32, 64, or 128"):
+                Loadcell.validate_config(config)
+    
+    @pytest.mark.parametrize("pin_value,should_pass", [
+        (1, True),
+        (40, True),
+        (5, True),
+        (6, True),
+        (0, False),
+        (41, False),
+        (-1, False),
+        (100, False),
+    ])
+    def test_validate_pin_values(self, pin_value, should_pass):
+        """Test GPIO pin validation"""
+        config = ComponentConfig()
+        config.name = "test_loadcell"
+        
+        # Test doutPin
+        attributes = Struct()
+        attributes.fields["doutPin"].number_value = pin_value
+        config.attributes.CopyFrom(attributes)
+        
+        if should_pass:
+            Loadcell.validate_config(config)
+        else:
+            with pytest.raises(Exception, match="Data Out pin must be a valid GPIO pin number"):
+                Loadcell.validate_config(config)
+    
+    @pytest.mark.parametrize("num_readings,should_pass", [
+        (1, True),
+        (50, True),
+        (99, True),
+        (0, False),
+        (100, False),
+        (-1, False),
+        (200, False),
+    ])
+    def test_validate_number_of_readings(self, num_readings, should_pass):
+        """Test numberOfReadings validation"""
+        config = ComponentConfig()
+        config.name = "test_loadcell"
+        
+        attributes = Struct()
+        attributes.fields["numberOfReadings"].number_value = num_readings
+        config.attributes.CopyFrom(attributes)
+        
+        if should_pass:
+            Loadcell.validate_config(config)
+        else:
+            with pytest.raises(Exception, match="Number of readings must be a positive integer less than 100"):
+                Loadcell.validate_config(config)
+    
+    @pytest.mark.parametrize("tare_offset,should_pass", [
+        (-1.0, True),
+        (-100.5, True),
+        (-0.1, True),
+        (0.0, True),
+        (1.0, False),
+        (100.0, False),
+    ])
+    def test_validate_tare_offset(self, tare_offset, should_pass):
+        """Test tare_offset validation"""
+        config = ComponentConfig()
+        config.name = "test_loadcell"
+        
+        attributes = Struct()
+        attributes.fields["tare_offset"].number_value = tare_offset
+        config.attributes.CopyFrom(attributes)
+        
+        if should_pass:
+            Loadcell.validate_config(config)
+        else:
+            with pytest.raises(Exception, match="Tare offset must be a non-positive floating point value \\(≤ 0\\.0\\)"):
+                Loadcell.validate_config(config)
     
     def test_reconfigure_with_all_attributes(self, loadcell_sensor):
         """Test sensor reconfiguration with all attributes set"""

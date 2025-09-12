@@ -16,7 +16,7 @@ def mock_hx711_library():
         mock_class.return_value = mock_instance
         
         # Default behavior for HX711 instance
-        mock_instance.get_raw_data.return_value = [82000, 82100, 81900]
+        mock_instance.get_raw_data.return_value = [82000.0, 82100.3, 81900.2]
         mock_instance.reset.return_value = None
         
         yield mock_class, mock_instance
