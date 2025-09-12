@@ -11,9 +11,9 @@ from viam.resource.easy_resource import EasyResource
 from viam.resource.types import Model, ModelFamily
 from viam.utils import SensorReading, struct_to_dict, ValueTypes
 import random
-from hx711 import HX711
 
 # Handle RPi.GPIO import for non-Raspberry Pi systems (like GitHub Actions)
+# This must be done BEFORE importing hx711, as hx711 also imports RPi.GPIO
 try:
     import RPi.GPIO as GPIO
 except ImportError:
@@ -24,6 +24,12 @@ except ImportError:
             pass  # No-op for testing/CI environments
     
     GPIO = MockGPIO
+    # Mock RPi.GPIO at the module level so hx711 can import it
+    import sys
+    sys.modules['RPi'] = type(sys)('RPi')
+    sys.modules['RPi.GPIO'] = GPIO
+
+from hx711 import HX711
 
 class Loadcell(Sensor, EasyResource):
     MODEL: ClassVar[Model] = Model(ModelFamily("edss", "hx711-loadcell"), "loadcell")
