@@ -41,3 +41,4 @@ The following attributes are available for this model:
 }
 ```
 
+The `tare` function is a DoCommand. Call it with `"tare": {}`, the return value is the value (in kgs) of the weight that will be systematically subtracted from the readings. 
