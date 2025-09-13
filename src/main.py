@@ -17,11 +17,43 @@ import random
 try:
     import RPi.GPIO as GPIO
 except ImportError:
-    # Create a mock GPIO module for non-Raspberry Pi systems
+    # Create a comprehensive mock GPIO module for non-Raspberry Pi systems
     class MockGPIO:
+        # GPIO constants
+        OUT = 0
+        IN = 1
+        HIGH = 1
+        LOW = 0
+        BCM = 11
+        BOARD = 10
+        
         @staticmethod
-        def cleanup(pins):
+        def cleanup(pins=None):
             pass  # No-op for testing/CI environments
+        
+        @staticmethod
+        def setup(pin, mode, initial=None):
+            pass  # No-op for testing/CI environments
+        
+        @staticmethod
+        def output(pin, value):
+            pass  # No-op for testing/CI environments
+        
+        @staticmethod
+        def input(pin):
+            return 0  # Return 0 for testing/CI environments
+        
+        @staticmethod
+        def setmode(mode):
+            pass  # No-op for testing/CI environments
+        
+        @staticmethod
+        def setwarnings(flag):
+            pass  # No-op for testing/CI environments
+        
+        @staticmethod
+        def getmode():
+            return MockGPIO.BCM  # Return BCM mode for testing/CI environments
     
     GPIO = MockGPIO
     # Mock RPi.GPIO at the module level so hx711 can import it
