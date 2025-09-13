@@ -17,7 +17,8 @@ def is_raspberry_pi():
     """Check if running on Raspberry Pi"""
     try:
         with open("/proc/cpuinfo", "r") as f:
-            return "BCM" in f.read()
+            content = f.read()
+            return "BCM" in content or "Raspberry Pi" in content
     except FileNotFoundError:
         return False
 
@@ -45,10 +46,10 @@ class TestHardwareIntegration:
         config.name = "hardware_test_loadcell"
 
         attributes = Struct()
-        # Use different pins for testing to avoid conflicts
+        # Use the default pins where hardware is connected
         attributes.fields["gain"].number_value = 128
-        attributes.fields["doutPin"].number_value = 20  # Different pins for testing
-        attributes.fields["sckPin"].number_value = 21
+        attributes.fields["doutPin"].number_value = 5  # Hardware connected to GPIO 5
+        attributes.fields["sckPin"].number_value = 6   # Hardware connected to GPIO 6
         attributes.fields["numberOfReadings"].number_value = 5
         attributes.fields["tare_offset"].number_value = 0.0
 
