@@ -9,5 +9,38 @@ if ! $PYTHON -m pip install pyinstaller -Uqq; then
     exit 1
 fi
 
+# Build the Python executable
 $PYTHON -m PyInstaller --onefile --hidden-import="googleapiclient" src/main.py
-tar -czvf dist/archive.tar.gz ./dist/main
+
+# Create a comprehensive module package
+echo "📦 Creating module package with all necessary files..."
+
+# Create a temporary directory for packaging
+TEMP_DIR="temp_module"
+rm -rf "$TEMP_DIR"
+mkdir -p "$TEMP_DIR"
+
+# Copy essential files for deployment
+cp setup.sh "$TEMP_DIR/"
+cp run.sh "$TEMP_DIR/"
+cp build.sh "$TEMP_DIR/"
+cp meta.json "$TEMP_DIR/"
+cp requirements.txt "$TEMP_DIR/"
+cp README.md "$TEMP_DIR/"
+
+# Copy source code
+cp -r src/ "$TEMP_DIR/"
+
+# Copy the built executable
+cp dist/main "$TEMP_DIR/"
+
+# Create the final module archive
+tar -czvf module.tar.gz -C "$TEMP_DIR" .
+
+# Clean up temporary directory
+rm -rf "$TEMP_DIR"
+
+echo "✅ Module package created: module.tar.gz"
+echo "📋 Included files:"
+tar -tzf module.tar.gz | head -20
+echo "... (and more)"
