@@ -5,13 +5,14 @@ from viam.components.sensor import *
 from viam.proto.app.robot import ComponentConfig
 from viam.proto.common import ResourceName
 from viam.resource.base import ResourceBase
+from viam.resource.easy_resource import EasyResource
 from viam.resource.types import Model, ModelFamily
 from viam.utils import SensorReading, ValueTypes
 import Adafruit_BMP.BMP085 as BMP085
 import board
 import busio
 
-class BmpSensor(Sensor):
+class BmpSensor(Sensor, EasyResource):
     # To enable debug-level logging, either run viam-server with the --debug option,
     # or configure your resource/machine to display debug logs.
     MODEL: ClassVar[Model] = Model(ModelFamily("edss", "i2c-sensors"), "bmp-sensor")
@@ -68,17 +69,19 @@ class BmpSensor(Sensor):
             # Initialize I2C and BMP sensor
             i2c = busio.I2C(board.SCL, board.SDA)
             self.sensor = BMP085.BMP085(busnum=1)
-            
-            # Set sea level pressure from config if provided, otherwise use default
-            if "sea_level_pressure" in config.attributes:
-                self.sea_level_pressure = float(config.attributes["sea_level_pressure"])
-            else:
-                self.sea_level_pressure = 1013.25  # Default sea level pressure in hPa
-                
+            try:
+                # Set sea level pressure from config if provided, otherwise use default
+                if "sea_level_pressure" in config.attributes:
+                    self.sea_level_pressure = float(config.attributes["sea_level_pressure"])
+                else:
+                    self.sea_level_pressure = 1013.25  # Default sea level pressure in hPa
+            except Exception as e:
+                self.logger.error(f"Failed to set sea level pressure: {e}")
+                self.sensor = None
         except Exception as e:
-            self.logger.error(f"Failed to initialize BMP sensor: {e}")
+            self.logger.error(f"Failed to initialize I2C: {e}")
             self.sensor = None
-        
+ 
         return super().reconfigure(config, dependencies)
 
     async def get_readings(
