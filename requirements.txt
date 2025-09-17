@@ -1,6 +1,6 @@
 
 # Core Viam SDK
-viam-sdk==0.41.1
+viam-sdk==0.55.1
 
 # Python typing support
 typing-extensions>=4.0.0
