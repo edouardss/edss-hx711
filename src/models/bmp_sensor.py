@@ -7,7 +7,7 @@ from viam.proto.common import ResourceName
 from viam.resource.base import ResourceBase
 from viam.resource.easy_resource import EasyResource
 from viam.resource.types import Model, ModelFamily
-from viam.utils import SensorReading, ValueTypes
+from viam.utils import SensorReading, ValueTypes, struct_to_dict
 import Adafruit_BMP.BMP085 as BMP085
 import board
 import busio
@@ -45,14 +45,16 @@ class BmpSensor(Sensor, EasyResource):
         Returns:
             Sequence[str]: A list of implicit dependencies
         """
+        fields = config.attributes.fields
+
         # Validate sea_level_pressure parameter if provided
-        if "sea_level_pressure" in config.attributes:
-            try:
-                sea_level_pressure = float(config.attributes["sea_level_pressure"])
+        if "sea_level_pressure" in fields:
+            if not(fields["sea_level_pressure"].HasField("number_value")):
+                raise ValueError("sea_level_pressure must be a valid number")
+            else:
+                sea_level_pressure = int(fields["sea_level_pressure"].number_value)
                 if sea_level_pressure <= 0:
                     raise ValueError("sea_level_pressure must be a positive number")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Invalid sea_level_pressure value: {e}")
         
         return []
 
@@ -70,12 +72,9 @@ class BmpSensor(Sensor, EasyResource):
             i2c = busio.I2C(board.SCL, board.SDA)
             self.sensor = BMP085.BMP085(busnum=1)
             
-            # Set sea level pressure from config if provided, otherwise use default
-            if "sea_level_pressure" in config.attributes:
-                self.sea_level_pressure = float(config.attributes["sea_level_pressure"])
-            else:
-                self.sea_level_pressure = 1013.25  # Default sea level pressure in hPa
-                
+            attrs = struct_to_dict(config.attributes)
+            self.sea_level_pressure = int(attrs.get("sea_level_pressure", 101325))  # Default sea level pressure in hPa*100
+
         except Exception as e:
             self.logger.error(f"Failed to initialize BMP sensor: {e}")
             self.sensor = None
