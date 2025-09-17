@@ -46,13 +46,12 @@ class BmpSensor(Sensor, EasyResource):
             Sequence[str]: A list of implicit dependencies
         """
         # Validate sea_level_pressure parameter if provided
-        if "sea_level_pressure" in config.attributes:
-            try:
-                sea_level_pressure = float(config.attributes["sea_level_pressure"])
-                if sea_level_pressure <= 0:
-                    raise ValueError("sea_level_pressure must be a positive number")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Invalid sea_level_pressure value: {e}")
+        try:
+            sea_level_pressure = float(config.attributes["sea_level_pressure"])
+            if sea_level_pressure <= 0:
+                raise ValueError("sea_level_pressure must be a positive number")
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid sea_level_pressure value: {e}")
         
         return []
 
