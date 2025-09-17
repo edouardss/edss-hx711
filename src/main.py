@@ -23,7 +23,7 @@ try:
 except Exception as e:
     print("BmpSensor error occured: ", e)
     try:
-        from .models import BmpSensor
+        from .models.bmp_sensor import BmpSensor
         print("BmpSensor imported locally")
     except Exception as e:
         print("BmpSensor error occured: ", e)
