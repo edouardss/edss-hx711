@@ -8,5 +8,9 @@ typing-extensions>=4.0.0
 # HX711 Load Cell Library
 hx711==1.1.2.3
 
+Adafruit-BMP==1.5.2
+
+adafruit-blinka==8.47.0
+
 # Raspberry Pi GPIO Library (only available on Raspberry Pi)
 RPi.GPIO>=0.7.1; sys_platform == "linux" and platform_machine == "aarch64"

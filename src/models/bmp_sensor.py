@@ -1,5 +1,4 @@
-from typing import (Any, ClassVar, Dict, Final, List, Mapping, Optional,
-                    Sequence)
+from typing import (Any, ClassVar, Mapping, Optional,Sequence)
 
 from typing_extensions import Self
 from viam.components.sensor import *
@@ -11,7 +10,6 @@ from viam.utils import SensorReading, ValueTypes
 import Adafruit_BMP.BMP085 as BMP085
 import board
 import busio
-import time
 
 class BmpSensor(Sensor):
     # To enable debug-level logging, either run viam-server with the --debug option,
