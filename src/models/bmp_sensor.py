@@ -77,10 +77,10 @@ class BmpSensor(Sensor, EasyResource):
                     self.sea_level_pressure = 1013.25  # Default sea level pressure in hPa
             except Exception as e:
                 self.logger.error(f"Failed to set sea level pressure: {e}")
-                self.sensor = None
         except Exception as e:
             self.logger.error(f"Failed to initialize I2C: {e}")
             self.sensor = None
+            raise e
  
         return super().reconfigure(config, dependencies)
 
