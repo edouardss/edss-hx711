@@ -46,12 +46,13 @@ class BmpSensor(Sensor, EasyResource):
             Sequence[str]: A list of implicit dependencies
         """
         # Validate sea_level_pressure parameter if provided
-        try:
-            sea_level_pressure = float(config.attributes["sea_level_pressure"])
-            if sea_level_pressure <= 0:
-                raise ValueError("sea_level_pressure must be a positive number")
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Invalid sea_level_pressure value: {e}")
+        if "sea_level_pressure" in config.attributes:
+            try:
+                sea_level_pressure = float(config.attributes["sea_level_pressure"])
+                if sea_level_pressure <= 0:
+                    raise ValueError("sea_level_pressure must be a positive number")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid sea_level_pressure value: {e}")
         
         return []
 
@@ -68,18 +69,17 @@ class BmpSensor(Sensor, EasyResource):
             # Initialize I2C and BMP sensor
             i2c = busio.I2C(board.SCL, board.SDA)
             self.sensor = BMP085.BMP085(busnum=1)
-            try:
-                # Set sea level pressure from config if provided, otherwise use default
-                if "sea_level_pressure" in config.attributes:
-                    self.sea_level_pressure = float(config.attributes["sea_level_pressure"])
-                else:
-                    self.sea_level_pressure = 1013.25  # Default sea level pressure in hPa
-            except Exception as e:
-                self.logger.error(f"Failed to set sea level pressure: {e}")
+            
+            # Set sea level pressure from config if provided, otherwise use default
+            if "sea_level_pressure" in config.attributes:
+                self.sea_level_pressure = float(config.attributes["sea_level_pressure"])
+            else:
+                self.sea_level_pressure = 1013.25  # Default sea level pressure in hPa
+                
         except Exception as e:
-            self.logger.error(f"Failed to initialize I2C: {e}")
+            self.logger.error(f"Failed to initialize BMP sensor: {e}")
             self.sensor = None
-            raise e
+            raise
  
         return super().reconfigure(config, dependencies)
 
