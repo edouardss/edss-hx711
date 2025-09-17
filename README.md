@@ -1,13 +1,14 @@
 # Module hx711-loadcell 
 
 Module for supporting the HX711 ADC for use with a load cell to measure weight.
+Added also a model for a BMP altitude sensor. 
 
 intially as kodama;hx711-loadcell:loadcell
 Expanded to include tare and wider reading payload. 
 
 Loadcell model uses the hx711 Python library and currently is set to take the specified number of readings and return the average value of those readings.
 
-### Configuration
+### Configuration for HX711
 The following attribute template can be used to configure this model:
 
 ```json
@@ -40,5 +41,16 @@ The following attributes are available for this model:
   "numberOfReadings":3
 }
 ```
-
 The `tare` function is a DoCommand. Call it with `"tare": {}`, the return value is the value (in kgs) of the weight that will be systematically subtracted from the readings. 
+
+### Configuration for BMP
+The following attribute template can be used to configure this model:
+
+```json
+{
+  "sea_level_pressure": 101325
+}
+```
+pressure is measured in Pa (Pascals)
+This is optional. 
+
