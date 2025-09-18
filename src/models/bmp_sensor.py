@@ -74,6 +74,10 @@ class BmpSensor(Sensor, EasyResource):
             
             attrs = struct_to_dict(config.attributes)
             self.sea_level_pressure = int(attrs.get("sea_level_pressure", 101325))  # Default sea level pressure in hPa*100
+            
+            # Initialize tare offsets (default to 0 - no offset)
+            self.pressure_offset = 0.0
+            self.altitude_offset = 0.0
 
         except Exception as e:
             self.logger.error(f"Failed to initialize BMP sensor: {e}")
@@ -93,17 +97,24 @@ class BmpSensor(Sensor, EasyResource):
             try:
                 # Read sensor data
                 temperature = self.sensor.read_temperature()
-                pressure = self.sensor.read_pressure()
+                raw_pressure = self.sensor.read_pressure()
+                raw_altitude = self.sensor.read_altitude(self.sea_level_pressure)
                 
-                # Calculate altitude using the configured sea level pressure
-                altitude = self.sensor.read_altitude(self.sea_level_pressure)
+                # Apply tare offsets (always applied, defaults to 0)
+                pressure = raw_pressure - self.pressure_offset
+                altitude = raw_altitude - self.altitude_offset
                 
                 readings = {
-                    "temperature": float(temperature),
-                    "pressure": float(pressure),
-                    "altitude": float(altitude),
-                    "sea_level_pressure": float(self.sea_level_pressure),
+                    "temperature - C": float(temperature),
+                    "pressure - Pa": float(pressure),
+                    "altitude - m": float(altitude),
+                    "sea_level_pressure - Pa": float(self.sea_level_pressure),
+                    "raw_pressure - Pa": float(raw_pressure),
+                    "raw_altitude - m": float(raw_altitude),
+                    "pressure_offset - Pa": float(self.pressure_offset),
+                    "altitude_offset - m": float(self.altitude_offset),
                 }
+                
                 return readings
             except Exception as e:
                 self.logger.error(f"Error reading sensor data: {e}")
@@ -119,7 +130,53 @@ class BmpSensor(Sensor, EasyResource):
         timeout: Optional[float] = None,
         **kwargs
     ) -> Mapping[str, ValueTypes]:
-        self.logger.error("`do_command` is not implemented")
-        raise NotImplementedError()
+        """Handle custom commands for the BMP sensor.
+        
+        Supported commands:
+        - "tare": Set current pressure and altitude as baseline (offset = 0)
+        - "reset_tare": Clear tare offsets and reset to original readings
+        """
+        if not self.sensor:
+            self.logger.error("Sensor not initialized")
+            return {"error": "Sensor not initialized"}
+        
+        command_name = command.get("command", "").lower()
+        
+        try:
+            if command_name == "tare":
+                # Read current values and set as baseline (offset = 0)
+                self.pressure_offset = self.sensor.read_pressure()
+                self.altitude_offset = self.sensor.read_altitude(self.sea_level_pressure)
+                
+                self.logger.info(f"Tare set - Pressure baseline: {self.pressure_offset:.2f} Pa, Altitude baseline: {self.altitude_offset:.2f} m")
+                
+                return {
+                    "status": "tare_completed",
+                    "pressure_offset": float(self.pressure_offset),
+                    "altitude_offset": float(self.altitude_offset),
+                    "message": "Tare completed successfully"
+                }
+                
+            elif command_name == "reset_tare":
+                # Clear tare offsets
+                self.pressure_offset = 0.0
+                self.altitude_offset = 0.0
+                
+                self.logger.info("Tare reset - returning to raw readings")
+                
+                return {
+                    "status": "tare_reset",
+                    "message": "Tare reset successfully"
+                }
+                
+            else:
+                return {
+                    "error": f"Unknown command: {command_name}",
+                    "available_commands": ["tare", "reset_tare"]
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error executing command '{command_name}': {e}")
+            return {"error": f"Command failed: {str(e)}"}
 
 
