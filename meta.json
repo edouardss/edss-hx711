@@ -17,7 +17,7 @@
   "build": {
     "build": "./build.sh",
     "setup": "./setup.sh",
-    "path": "./module.tar.gz",
+    "path": "dist/module.tar.gz",
     "arch": [
       "linux/amd64",
       "linux/arm64"
