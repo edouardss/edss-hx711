@@ -56,6 +56,15 @@ class BmpSensor(Sensor, EasyResource):
                 if sea_level_pressure <= 0:
                     raise ValueError("sea_level_pressure must be a positive number")
         
+        # Validate units parameter if provided
+        if "units" in fields:
+            if not fields["units"].HasField("string_value"):
+                raise ValueError("units must be a valid string")
+            else:
+                units = fields["units"].string_value.lower()
+                if units not in ["metric", "imperial"]:
+                    raise ValueError("units must be either 'metric' or 'imperial'")
+        
         return []
 
     def reconfigure(
@@ -74,6 +83,11 @@ class BmpSensor(Sensor, EasyResource):
             
             attrs = struct_to_dict(config.attributes)
             self.sea_level_pressure = int(attrs.get("sea_level_pressure", 101325))  # Default sea level pressure in hPa*100
+            self.units = attrs.get("units", "metric").lower()  # Default to metric units
+            
+            # Initialize tare offsets (default to 0 - no offset)
+            self.pressure_offset = 0.0
+            self.altitude_offset = 0.0
 
         except Exception as e:
             self.logger.error(f"Failed to initialize BMP sensor: {e}")
@@ -93,17 +107,63 @@ class BmpSensor(Sensor, EasyResource):
             try:
                 # Read sensor data
                 temperature = self.sensor.read_temperature()
-                pressure = self.sensor.read_pressure()
+                raw_pressure = self.sensor.read_pressure()
+                raw_altitude = self.sensor.read_altitude(self.sea_level_pressure)
                 
-                # Calculate altitude using the configured sea level pressure
-                altitude = self.sensor.read_altitude(self.sea_level_pressure)
+                # Apply tare offsets (always applied, defaults to 0)
+                pressure = raw_pressure - self.pressure_offset
+                altitude = raw_altitude - self.altitude_offset
+                
+                # Convert units based on configuration
+                if self.units == "imperial":
+                    # Convert temperature from Celsius to Fahrenheit
+                    temperature_display = (temperature * 9/5) + 32
+                    temp_unit = "F"
+                    
+                    # Convert pressure from Pa to inHg (inches of mercury)
+                    pressure_display = pressure * 0.0002953  # Pa to inHg
+                    pressure_unit = "inHg"
+                    
+                    # Convert altitude from meters to feet
+                    altitude_display = altitude * 3.28084  # meters to feet
+                    altitude_unit = "ft"
+                    
+                    # Convert sea level pressure
+                    sea_level_display = self.sea_level_pressure * 0.0002953
+                    sea_level_unit = "inHg"
+                    
+                    # Convert raw values
+                    raw_pressure_display = raw_pressure * 0.0002953
+                    raw_altitude_display = raw_altitude * 3.28084
+                    
+                    # Convert offsets
+                    pressure_offset_display = self.pressure_offset * 0.0002953
+                    altitude_offset_display = self.altitude_offset * 3.28084
+                else:  # metric (default)
+                    temperature_display = temperature
+                    temp_unit = "C"
+                    pressure_display = pressure
+                    pressure_unit = "Pa"
+                    altitude_display = altitude
+                    altitude_unit = "m"
+                    sea_level_display = self.sea_level_pressure
+                    sea_level_unit = "Pa"
+                    raw_pressure_display = raw_pressure
+                    raw_altitude_display = raw_altitude
+                    pressure_offset_display = self.pressure_offset
+                    altitude_offset_display = self.altitude_offset
                 
                 readings = {
-                    "temperature": float(temperature),
-                    "pressure": float(pressure),
-                    "altitude": float(altitude),
-                    "sea_level_pressure": float(self.sea_level_pressure),
+                    f"temperature - {temp_unit}": float(temperature_display),
+                    f"pressure - {pressure_unit}": float(pressure_display),
+                    f"altitude - {altitude_unit}": float(altitude_display),
+                    f"sea_level_pressure - {sea_level_unit}": float(sea_level_display),
+                    f"raw_pressure - {pressure_unit}": float(raw_pressure_display),
+                    f"raw_altitude - {altitude_unit}": float(raw_altitude_display),
+                    f"pressure_offset - {pressure_unit}": float(pressure_offset_display),
+                    f"altitude_offset - {altitude_unit}": float(altitude_offset_display),
                 }
+                
                 return readings
             except Exception as e:
                 self.logger.error(f"Error reading sensor data: {e}")
@@ -112,14 +172,57 @@ class BmpSensor(Sensor, EasyResource):
             self.logger.error("Sensor not initialized")
             return {}
 
+    async def tare(self):
+        """Tare the BMP sensor by setting the current readings as baseline offsets."""
+        if not self.sensor:
+            self.logger.error("Sensor not initialized")
+            raise RuntimeError("Sensor not initialized")
+        
+        try:
+            self.logger.debug("Taring BMP sensor")
+            # Read current values and set as baseline (offset = 0)
+            self.pressure_offset = self.sensor.read_pressure()
+            self.altitude_offset = self.sensor.read_altitude(self.sea_level_pressure)
+            
+            self.logger.info(f"Tare set - Pressure baseline: {self.pressure_offset:.2f} Pa, Altitude baseline: {self.altitude_offset:.2f} m")
+        except Exception as e:
+            self.logger.error(f"Error during tare operation: {e}")
+            raise
+
+    async def reset_tare(self):
+        """Reset tare offsets to zero."""
+        try:
+            self.logger.debug("Resetting tare offsets")
+            self.pressure_offset = 0.0
+            self.altitude_offset = 0.0
+            self.logger.info("Tare reset - returning to raw readings")
+        except Exception as e:
+            self.logger.error(f"Error during reset tare operation: {e}")
+            raise
+
     async def do_command(
         self,
         command: Mapping[str, ValueTypes],
         *,
         timeout: Optional[float] = None,
-        **kwargs
+        **kwargs,
     ) -> Mapping[str, ValueTypes]:
-        self.logger.error("`do_command` is not implemented")
-        raise NotImplementedError()
+        result = {key: False for key in command.keys()}
+        for name, args in command.items():
+            if name == "tare":
+                await self.tare(*args)
+                result[name] = {
+                    "pressure_offset": float(self.pressure_offset),
+                    "altitude_offset": float(self.altitude_offset)
+                }
+            elif name == "reset_tare":
+                await self.reset_tare(*args)
+                result[name] = True
+            else:
+                result[name] = {
+                    "error": f"Unknown command: {name}",
+                    "available_commands": ["tare", "reset_tare"]
+                }
+        return result
 
 
