@@ -26,7 +26,9 @@ cp run.sh "$TEMP_DIR/"
 cp build.sh "$TEMP_DIR/"
 cp meta.json "$TEMP_DIR/"
 cp requirements.txt "$TEMP_DIR/"
-cp README.md "$TEMP_DIR/"
+#cp README.md "$TEMP_DIR/"
+cp README_loadcell.md "$TEMP_DIR/"
+cp README_bmp.md "$TEMP_DIR/"
 
 # Copy source code
 cp -r src/ "$TEMP_DIR/"

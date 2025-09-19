@@ -9,7 +9,13 @@
       "api": "rdk:component:sensor",
       "model": "edss:hx711-loadcell:loadcell",
       "short_description": "basic loadcell sensor with a tare function, returning in kgs.",
-      "markdown_link": "README.md"
+      "markdown_link": "README_loadcell.md"
+    },
+    {
+      "api": "rdk:component:sensor",
+      "model": "edss:i2c-sensors:bmp-sensor",
+      "short_description": "BMP altitude sensor for measuring atmospheric pressure and altitude.",
+      "markdown_link": "README_bmp.md"
     }
   ],
   "entrypoint": "./run.sh",
