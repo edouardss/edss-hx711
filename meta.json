@@ -24,7 +24,7 @@
       "markdown_link": "README.md#3-imu-sensor"
     }
   ],
-  "entrypoint": "./run.sh",
+  "entrypoint": "./reload.sh",
   "first_run": "",
   "build": {
     "build": "./build.sh",
