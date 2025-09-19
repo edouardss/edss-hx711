@@ -34,13 +34,14 @@ cp -r src/ "$TEMP_DIR/"
 # Copy the built executable
 cp dist/main "$TEMP_DIR/"
 
-# Create the final module archive
-tar -czvf module.tar.gz -C "$TEMP_DIR" .
+# Create the final module archive in the dist directory
+mkdir -p dist
+tar -czvf dist/module.tar.gz -C "$TEMP_DIR" .
 
 # Clean up temporary directory
 rm -rf "$TEMP_DIR"
 
-echo "✅ Module package created: module.tar.gz"
+echo "✅ Module package created: dist/module.tar.gz"
 echo "📋 Included files:"
-tar -tzf module.tar.gz | head -20
+tar -tzf dist/module.tar.gz | head -20
 echo "... (and more)"
