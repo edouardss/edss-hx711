@@ -57,7 +57,7 @@ The `tare` function is a DoCommand. Call it with `"tare": {}`, the return value 
 BMP sensor for measuring atmospheric pressure and altitude.
 Based on the delta between sea level pressure and current pressure.
 
-### Configuration
+#### Configuration
 The following attribute template can be used to configure this model:
 
 ```json
@@ -85,7 +85,7 @@ The following attributes are available for this model:
 }
 ```
 
-### DoCommand
+#### DoCommand
 
 There is a command to `tare` the sensor to the current altitude, which returns current readings and sets offsets so that readings will subtract those values from pressure and altitude going forward. 
 There is also a command `reset_tare` to reset the offset values to 0. 
