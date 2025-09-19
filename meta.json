@@ -3,7 +3,7 @@
   "module_id": "edss:edss-hx711",
   "visibility": "private",
   "url": "https://github.com/edouardss/edss-hx711",
-  "description": "Modular sensor components: HX711 loadcell for weight measurement and BMP sensor for atmospheric pressure and altitude",
+  "description": "Modular sensor components: HX711 loadcell for weight measurement, BMP sensor for atmospheric pressure and altitude, and IMU sensor for motion sensing",
   "models": [
     {
       "api": "rdk:component:sensor",
@@ -16,6 +16,12 @@
       "model": "edss:i2c-sensors:bmp-sensor",
       "short_description": "BMP altitude sensor for measuring atmospheric pressure and altitude",
       "markdown_link": "README.md#2-bmp-altitude-sensor"
+    },
+    {
+      "api": "rdk:component:sensor",
+      "model": "edss:i2c-sensors:imu-sensor",
+      "short_description": "IMU sensor for measuring acceleration, gyroscope, and temperature",
+      "markdown_link": "README.md#3-imu-sensor"
     }
   ],
   "entrypoint": "./run.sh",

@@ -10,6 +10,8 @@ hx711==1.1.2.3
 
 Adafruit-BMP==1.5.2
 
+adafruit-circuitpython-mpu6050==2.0.0
+
 adafruit-blinka==8.47.0
 
 # Raspberry Pi GPIO Library (only available on Raspberry Pi)

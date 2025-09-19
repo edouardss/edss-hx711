@@ -30,6 +30,19 @@ except Exception as e:
         print("Could not find the module BmpSensor, locally")
         exit(1)
 
+try:
+    from models.imu_sensor import ImuSensor
+    print("ImuSensor imported normally")
+except Exception as e:
+    print("ImuSensor error occured: ", e)
+    try:
+        from .models.imu_sensor import ImuSensor
+        print("ImuSensor imported locally")
+    except Exception as e:
+        print("ImuSensor error occured: ", e)
+        print("Could not find the module ImuSensor, locally")
+        exit(1)
+
 
 if __name__ == "__main__":
     asyncio.run(Module.run_from_registry())

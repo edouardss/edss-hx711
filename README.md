@@ -1,6 +1,6 @@
 # EDSS HX711 Sensor Module
 
-This module provides sensor components for the HX711 ADC with load cell for weight measurement and BMP sensor for atmospheric pressure and altitude measurement.
+This module provides sensor components for the HX711 ADC with load cell for weight measurement, BMP sensor for atmospheric pressure and altitude measurement, and IMU sensor for motion sensing.
 
 ## Models
 
@@ -98,12 +98,62 @@ There is also a command `reset_tare` to reset the offset values to 0.
 }
 ```
 
+### 3. IMU Sensor
+
+IMU sensor for measuring acceleration, gyroscope, and temperature using MPU6050/MPU9250 series sensors.
+
+#### Configuration
+
+The following attribute template can be used to configure this model:
+
+```json
+{
+  "i2c_address": 104 (integer I2C address in decimal. Default value is 104 (0x68))
+  "units": "metric" or "imperial" (default is "metric" - m/s², rad/s, C. "imperial" is ft/s², deg/s, F)
+  "sample_rate": 100 (integer sample rate in Hz, default is 100)
+}
+```
+
+#### Attributes
+
+The following attributes are available for this model:
+
+| Name | Type | Inclusion | Description |
+|------|------|-----------|-------------|
+| `i2c_address` | int | Optional | I2C address of the IMU sensor (default: 104/0x68) |
+| `units` | string | Optional | metric or imperial units, default is metric |
+| `sample_rate` | int | Optional | Sample rate in Hz (default: 100) |
+
+#### Example Configuration
+
+```json
+{
+  "i2c_address": 104,
+  "units": "metric",
+  "sample_rate": 100
+}
+```
+
+#### DoCommand
+
+There is a command to `tare` the sensor to the current orientation, which returns current readings and sets offsets so that readings will subtract those values from acceleration and gyroscope going forward. 
+There is also a command `reset_tare` to reset the offset values to 0.
+
+#### Example DoCommand
+
+```json
+{
+  "tare": {}
+}
+```
+
 ## Installation
 
 This module requires the following Python packages:
 - `hx711` - for HX711 ADC communication
 - `RPi.GPIO` - for GPIO control on Raspberry Pi
 - `Adafruit_BMP` - for BMP sensor communication
+- `adafruit-circuitpython-mpu6050` - for IMU sensor communication
 - `board` and `busio` - for I2C communication
 
 ## Hardware Requirements
@@ -119,6 +169,11 @@ This module requires the following Python packages:
 - I2C connection to Raspberry Pi
 - 3.3V power supply
 
+### IMU Sensor
+- MPU6050/MPU9250 sensor module
+- I2C connection to Raspberry Pi
+- 3.3V power supply
+
 ## Usage
 
-Both sensors implement the Viam sensor interface and can be used with the Viam SDK. The sensors return readings as dictionaries with appropriate units (kg for weight, Pa for pressure, m for altitude).
+All sensors implement the Viam sensor interface and can be used with the Viam SDK. The sensors return readings as dictionaries with appropriate units (kg for weight, Pa for pressure, m for altitude, m/s² for acceleration, rad/s for gyroscope).
