@@ -1,5 +1,3 @@
-# Copy the content from the conftest.py artifact I provided above
-# tests/conftest.py
 """Shared test fixtures for HX711 loadcell tests"""
 
 import pytest
@@ -7,47 +5,33 @@ from unittest.mock import Mock, patch
 from viam.proto.app.robot import ComponentConfig
 from google.protobuf.struct_pb2 import Struct
 from viam.resource.registry import Registry
-import os
-
-# Note: We'll handle registration clearing in fixtures instead
-
-
-@pytest.fixture(scope="session", autouse=True)
-def clear_registry_session():
-    """Clear the Viam resource registry at the start of the test session"""
-    Registry._REGISTRY.clear()
-    yield
-    Registry._REGISTRY.clear()
 
 
 @pytest.fixture(autouse=True)
-def prevent_auto_registration():
-    """Prevent automatic model registration during tests"""
-    # Clear registry before each test to prevent duplicates
-    Registry._REGISTRY.clear()
+def prevent_duplicate_registration():
+    """Prevent duplicate resource registration during tests"""
+    # Patch the registry's register_resource_creator method to ignore duplicates
+    original_register_resource_creator = getattr(Registry, 'register_resource_creator', None)
     
-    # Patch the registry to ignore duplicate registrations during tests
-    original_register = Registry.register
-    
-    def safe_register(resource_type, resource_class):
-        """Register resource but ignore duplicates during tests"""
-        try:
-            return original_register(resource_type, resource_class)
-        except Exception as e:
-            if "duplicate" in str(e).lower():
-                # Ignore duplicate registration errors during tests
-                pass
-            else:
-                raise e
-    
-    Registry.register = safe_register
+    if original_register_resource_creator:
+        def safe_register_resource_creator(api, model, registration):
+            """Register resource creator but ignore duplicates during tests"""
+            try:
+                return original_register_resource_creator(api, model, registration)
+            except Exception as e:
+                if "duplicate" in str(e).lower() or "already registered" in str(e).lower():
+                    # Ignore duplicate registration errors during tests
+                    pass
+                else:
+                    raise e
+        
+        Registry.register_resource_creator = safe_register_resource_creator
     
     yield
     
-    # Restore original register method
-    Registry.register = original_register
-    # Clear registry after each test
-    Registry._REGISTRY.clear()
+    # Restore original register_resource_creator method
+    if original_register_resource_creator:
+        Registry.register_resource_creator = original_register_resource_creator
 
 
 @pytest.fixture

@@ -164,21 +164,28 @@ class TestViamCompliance:
     ):
         """Test that module properly implements Viam's Sensor interface"""
         from viam.components.sensor import Sensor
+        from unittest.mock import patch
 
         mock_class, mock_instance = mock_hx711_library
-        sensor = Loadcell.new(basic_config, dependencies={})
+        
+        # Patch the get_hx711 method to return our mock
+        with patch.object(Loadcell, 'get_hx711', return_value=mock_instance):
+            sensor = Loadcell.new(basic_config, dependencies={})
+            
+            # Initialize the sensor (this calls reconfigure internally)
+            sensor.reconfigure(basic_config, dependencies={})
 
-        # Should be a proper Viam sensor
-        assert isinstance(sensor, Sensor)
+            # Should be a proper Viam sensor
+            assert isinstance(sensor, Sensor)
 
-        # Test required Viam methods exist and work
-        readings = await sensor.get_readings()
-        assert isinstance(readings, dict)
-        assert len(readings) > 0
+            # Test required Viam methods exist and work
+            readings = await sensor.get_readings()
+            assert isinstance(readings, dict)
+            assert len(readings) > 0
 
-        # Test do_command interface
-        result = await sensor.do_command({"test": []})
-        assert isinstance(result, dict)
+            # Test do_command interface
+            result = await sensor.do_command({"test": []})
+            assert isinstance(result, dict)
 
     def test_model_registration(self):
         """Test that model is properly registered"""
