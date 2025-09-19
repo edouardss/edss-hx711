@@ -6,6 +6,48 @@ import pytest
 from unittest.mock import Mock, patch
 from viam.proto.app.robot import ComponentConfig
 from google.protobuf.struct_pb2 import Struct
+from viam.resource.registry import Registry
+import os
+
+# Note: We'll handle registration clearing in fixtures instead
+
+
+@pytest.fixture(scope="session", autouse=True)
+def clear_registry_session():
+    """Clear the Viam resource registry at the start of the test session"""
+    Registry._REGISTRY.clear()
+    yield
+    Registry._REGISTRY.clear()
+
+
+@pytest.fixture(autouse=True)
+def prevent_auto_registration():
+    """Prevent automatic model registration during tests"""
+    # Clear registry before each test to prevent duplicates
+    Registry._REGISTRY.clear()
+    
+    # Patch the registry to ignore duplicate registrations during tests
+    original_register = Registry.register
+    
+    def safe_register(resource_type, resource_class):
+        """Register resource but ignore duplicates during tests"""
+        try:
+            return original_register(resource_type, resource_class)
+        except Exception as e:
+            if "duplicate" in str(e).lower():
+                # Ignore duplicate registration errors during tests
+                pass
+            else:
+                raise e
+    
+    Registry.register = safe_register
+    
+    yield
+    
+    # Restore original register method
+    Registry.register = original_register
+    # Clear registry after each test
+    Registry._REGISTRY.clear()
 
 
 @pytest.fixture
@@ -66,9 +108,3 @@ def loadcell_sensor(basic_config, mock_hx711_library, mock_gpio):
     return sensor
 
 
-@pytest.fixture(autouse=True)
-def reset_module_state():
-    """Reset any module-level state between tests"""
-    yield
-    # Add any cleanup needed between tests
-    pass
