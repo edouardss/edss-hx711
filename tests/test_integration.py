@@ -149,6 +149,8 @@ class TestErrorHandling:
             mock_hx711.return_value = mock_hx711  # Return self for chaining
 
             sensor = Loadcell.new(config, dependencies={})
+            # Initialize the sensor properly to avoid hardware access
+            sensor.reconfigure(config, dependencies={})
 
             # Should handle permission errors gracefully (not raise exception)
             sensor.cleanup_gpio_pins()
@@ -253,34 +255,38 @@ class TestRealWorldScenarios:
         self, basic_config, mock_hx711_library, mock_gpio
     ):
         """Test changing configuration and reconfiguring"""
+        from unittest.mock import patch
+        
         mock_class, mock_instance = mock_hx711_library
 
-        # Create sensor with initial config
-        sensor = Loadcell.new(basic_config, dependencies={})
-        assert sensor.numberOfReadings == 3
+        # Create sensor with initial config and proper mocking
+        with patch.object(Loadcell, 'get_hx711', return_value=mock_instance):
+            sensor = Loadcell.new(basic_config, dependencies={})
+            sensor.reconfigure(basic_config, dependencies={})
+            assert sensor.numberOfReadings == 3
 
-        # Change configuration
-        new_config = ComponentConfig()
-        new_config.name = "updated_loadcell"
+            # Change configuration
+            new_config = ComponentConfig()
+            new_config.name = "updated_loadcell"
 
-        attributes = Struct()
-        attributes.fields["gain"].number_value = 64  # Changed
-        attributes.fields["doutPin"].number_value = 7  # Changed
-        attributes.fields["sckPin"].number_value = 8  # Changed
-        attributes.fields["numberOfReadings"].number_value = 5  # Changed
-        attributes.fields["tare_offset"].number_value = 1000.0  # Changed
+            attributes = Struct()
+            attributes.fields["gain"].number_value = 64  # Changed
+            attributes.fields["doutPin"].number_value = 7  # Changed
+            attributes.fields["sckPin"].number_value = 8  # Changed
+            attributes.fields["numberOfReadings"].number_value = 5  # Changed
+            attributes.fields["tare_offset"].number_value = 1000.0  # Changed
 
-        new_config.attributes.CopyFrom(attributes)
+            new_config.attributes.CopyFrom(attributes)
 
-        # Reconfigure
-        sensor.reconfigure(new_config, dependencies={})
+            # Reconfigure
+            sensor.reconfigure(new_config, dependencies={})
 
-        # Should have new values
-        assert sensor.gain == 64
-        assert sensor.doutPin == 7
-        assert sensor.sckPin == 8
-        assert sensor.numberOfReadings == 5
-        assert sensor.tare_offset == 1000.0
+            # Should have new values
+            assert sensor.gain == 64
+            assert sensor.doutPin == 7
+            assert sensor.sckPin == 8
+            assert sensor.numberOfReadings == 5
+            assert sensor.tare_offset == 1000.0
 
     @pytest.mark.asyncio
     async def test_stress_testing_multiple_operations(

@@ -88,7 +88,12 @@ def loadcell_sensor(basic_config, mock_hx711_library, mock_gpio):
     from src.main import Loadcell
 
     mock_class, mock_instance = mock_hx711_library
+    
+    # Create sensor and manually set the hx711 instance to our mock
     sensor = Loadcell.new(basic_config, dependencies={})
+    sensor.hx711 = mock_instance  # Set the mock directly
+    # Initialize the sensor properly
+    sensor.reconfigure(basic_config, dependencies={})
     return sensor
 
 
