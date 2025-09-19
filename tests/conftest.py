@@ -11,7 +11,7 @@ from google.protobuf.struct_pb2 import Struct
 @pytest.fixture
 def mock_hx711_library():
     """Mock the HX711 library that your module imports"""
-    with patch("src.main.HX711") as mock_class:
+    with patch("src.models.loadcell.HX711") as mock_class:
         mock_instance = Mock()
         mock_class.return_value = mock_instance
 
@@ -25,7 +25,7 @@ def mock_hx711_library():
 @pytest.fixture
 def mock_gpio():
     """Mock RPi.GPIO"""
-    with patch("src.main.GPIO") as mock:
+    with patch("src.models.loadcell.GPIO") as mock:
         yield mock
 
 

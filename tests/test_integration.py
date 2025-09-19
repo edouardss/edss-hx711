@@ -144,7 +144,7 @@ class TestErrorHandling:
         config.attributes.CopyFrom(Struct())
 
         # Mock both GPIO and HX711 to avoid hardware access
-        with patch("src.main.GPIO") as mock_gpio, patch("src.main.HX711") as mock_hx711:
+        with patch("src.models.loadcell.GPIO") as mock_gpio, patch("src.models.loadcell.HX711") as mock_hx711:
             mock_gpio.cleanup.side_effect = PermissionError("GPIO access denied")
             mock_hx711.return_value = mock_hx711  # Return self for chaining
 
