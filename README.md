@@ -96,6 +96,7 @@ There is also a command `reset_tare` to reset the offset values to 0.
 {
   "tare": {}
 }
+```
 
 ## Installation
 
