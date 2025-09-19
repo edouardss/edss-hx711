@@ -3,19 +3,19 @@
   "module_id": "edss:edss-hx711",
   "visibility": "private",
   "url": "https://github.com/edouardss/edss-hx711",
-  "description": "Modular sensor component: loadcell",
+  "description": "Modular sensor components: HX711 loadcell for weight measurement and BMP sensor for atmospheric pressure and altitude",
   "models": [
     {
       "api": "rdk:component:sensor",
       "model": "edss:hx711-loadcell:loadcell",
-      "short_description": "basic loadcell sensor with a tare function, returning in kgs.",
-      "markdown_link": "README_loadcell.md"
+      "short_description": "HX711 loadcell sensor with tare function, returning weight in kg",
+      "markdown_link": "README.md#1-hx711-loadcell-sensor"
     },
     {
       "api": "rdk:component:sensor",
       "model": "edss:i2c-sensors:bmp-sensor",
-      "short_description": "BMP altitude sensor for measuring atmospheric pressure and altitude.",
-      "markdown_link": "README_bmp.md"
+      "short_description": "BMP altitude sensor for measuring atmospheric pressure and altitude",
+      "markdown_link": "README.md#2-bmp-altitude-sensor"
     }
   ],
   "entrypoint": "./run.sh",
