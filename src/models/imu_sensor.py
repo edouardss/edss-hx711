@@ -155,22 +155,6 @@ class ImuSensor(Sensor, EasyResource):
                     # Convert temperature from Celsius to Fahrenheit
                     temp_display = (temperature * 9/5) + 32
                     temp_unit = "F"
-                    
-                    # Convert raw values
-                    raw_accel_x = acceleration[0] * 3.28084
-                    raw_accel_y = acceleration[1] * 3.28084
-                    raw_accel_z = acceleration[2] * 3.28084
-                    raw_gyro_x = gyro[0] * 57.2958
-                    raw_gyro_y = gyro[1] * 57.2958
-                    raw_gyro_z = gyro[2] * 57.2958
-                    
-                    # Convert offsets
-                    accel_x_offset_display = self.accel_x_offset * 3.28084
-                    accel_y_offset_display = self.accel_y_offset * 3.28084
-                    accel_z_offset_display = self.accel_z_offset * 3.28084
-                    gyro_x_offset_display = self.gyro_x_offset * 57.2958
-                    gyro_y_offset_display = self.gyro_y_offset * 57.2958
-                    gyro_z_offset_display = self.gyro_z_offset * 57.2958
                 else:  # metric (default)
                     accel_x_display = accel_x
                     accel_y_display = accel_y
@@ -182,39 +166,21 @@ class ImuSensor(Sensor, EasyResource):
                     gyro_unit = "rad/s"
                     temp_display = temperature
                     temp_unit = "C"
-                    raw_accel_x = acceleration[0]
-                    raw_accel_y = acceleration[1]
-                    raw_accel_z = acceleration[2]
-                    raw_gyro_x = gyro[0]
-                    raw_gyro_y = gyro[1]
-                    raw_gyro_z = gyro[2]
-                    accel_x_offset_display = self.accel_x_offset
-                    accel_y_offset_display = self.accel_y_offset
-                    accel_z_offset_display = self.accel_z_offset
-                    gyro_x_offset_display = self.gyro_x_offset
-                    gyro_y_offset_display = self.gyro_y_offset
-                    gyro_z_offset_display = self.gyro_z_offset
                 
+                # Core MPU readings - 3 acceleration + 3 rotation speed + temperature
                 readings = {
+                    # 3-axis acceleration readings
                     f"acceleration_x - {accel_unit}": float(accel_x_display),
                     f"acceleration_y - {accel_unit}": float(accel_y_display),
                     f"acceleration_z - {accel_unit}": float(accel_z_display),
+                    
+                    # 3-axis gyroscope (rotation speed) readings
                     f"gyro_x - {gyro_unit}": float(gyro_x_display),
                     f"gyro_y - {gyro_unit}": float(gyro_y_display),
                     f"gyro_z - {gyro_unit}": float(gyro_z_display),
+                    
+                    # Temperature reading
                     f"temperature - {temp_unit}": float(temp_display),
-                    f"raw_acceleration_x - {accel_unit}": float(raw_accel_x),
-                    f"raw_acceleration_y - {accel_unit}": float(raw_accel_y),
-                    f"raw_acceleration_z - {accel_unit}": float(raw_accel_z),
-                    f"raw_gyro_x - {gyro_unit}": float(raw_gyro_x),
-                    f"raw_gyro_y - {gyro_unit}": float(raw_gyro_y),
-                    f"raw_gyro_z - {gyro_unit}": float(raw_gyro_z),
-                    f"accel_x_offset - {accel_unit}": float(accel_x_offset_display),
-                    f"accel_y_offset - {accel_unit}": float(accel_y_offset_display),
-                    f"accel_z_offset - {accel_unit}": float(accel_z_offset_display),
-                    f"gyro_x_offset - {gyro_unit}": float(gyro_x_offset_display),
-                    f"gyro_y_offset - {gyro_unit}": float(gyro_y_offset_display),
-                    f"gyro_z_offset - {gyro_unit}": float(gyro_z_offset_display),
                 }
                 
                 return readings
