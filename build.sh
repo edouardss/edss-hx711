@@ -10,7 +10,7 @@ if ! $PYTHON -m pip install pyinstaller -Uqq; then
 fi
 
 # Build the Python executable
-$PYTHON -m PyInstaller --onefile --hidden-import="googleapiclient" src/main.py
+$PYTHON -m PyInstaller --onefile --hidden-import="googleapiclient" --hidden-import="src.models" --hidden-import="src.models.loadcell" --hidden-import="src.models.bmp_sensor" --hidden-import="src.models.imu_sensor" src/main.py
 
 # Create a comprehensive module package
 echo "📦 Creating module package with all necessary files..."
@@ -26,9 +26,7 @@ cp run.sh "$TEMP_DIR/"
 cp build.sh "$TEMP_DIR/"
 cp meta.json "$TEMP_DIR/"
 cp requirements.txt "$TEMP_DIR/"
-#cp README.md "$TEMP_DIR/"
-cp README_loadcell.md "$TEMP_DIR/"
-cp README_bmp.md "$TEMP_DIR/"
+cp README.md "$TEMP_DIR/"
 
 # Copy source code
 cp -r src/ "$TEMP_DIR/"

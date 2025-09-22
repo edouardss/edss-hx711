@@ -7,7 +7,11 @@ PYTHON="$VENV_NAME/bin/python"
 
 sh ./setup.sh
 
-# Be sure to use `exec` so that termination signals reach the python process,
-# or handle forwarding termination signals manually
-echo "Starting module..."
-exec $PYTHON -m src.main $@
+# Check if we have the PyInstaller executable, otherwise fall back to Python
+if [ -f "./main" ]; then
+    echo "Starting module using PyInstaller executable..."
+    exec ./main $@
+else
+    echo "PyInstaller executable not found, falling back to Python..."
+    exec $PYTHON -m src.main $@
+fi

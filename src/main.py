@@ -1,6 +1,7 @@
 """Main entry point for the HX711 load cell module."""
 
 import asyncio
+import sys
 
 from viam.module.module import Module
 
@@ -15,7 +16,7 @@ except Exception as e:
     except Exception as e:
         print("LoadCell error occured: ", e)
         print("Could not find the module LoadCell, locally")
-        exit(1)
+        sys.exit(1)
 
 try:
     from models.bmp_sensor import BmpSensor
@@ -28,7 +29,7 @@ except Exception as e:
     except Exception as e:
         print("BmpSensor error occured: ", e)
         print("Could not find the module BmpSensor, locally")
-        exit(1)
+        sys.exit(1)
 
 try:
     from models.imu_sensor import ImuSensor
@@ -41,7 +42,7 @@ except Exception as e:
     except Exception as e:
         print("ImuSensor error occured: ", e)
         print("Could not find the module ImuSensor, locally")
-        exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
