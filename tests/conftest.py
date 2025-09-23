@@ -85,12 +85,12 @@ def minimal_config():
 @pytest.fixture
 def loadcell_sensor(basic_config, mock_hx711_library, mock_gpio):
     """Create a Loadcell sensor instance with mocked dependencies"""
-    from src.main import Loadcell
+    from src.models.loadcell import LoadCell
 
     mock_class, mock_instance = mock_hx711_library
     
     # Create sensor and manually set the hx711 instance to our mock
-    sensor = Loadcell.new(basic_config, dependencies={})
+    sensor = LoadCell.new(basic_config, dependencies={})
     sensor.hx711 = mock_instance  # Set the mock directly
     # Initialize the sensor properly
     sensor.reconfigure(basic_config, dependencies={})

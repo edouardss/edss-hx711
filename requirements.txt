@@ -8,7 +8,7 @@ typing-extensions>=4.0.0
 # HX711 Load Cell Library
 hx711==1.1.2.3
 
-Adafruit-BMP==1.5.2
+adafruit-bmp
 
 adafruit-circuitpython-mpu6050==1.3.4
 adafruit-circuitpython-busdevice

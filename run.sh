@@ -8,10 +8,10 @@ PYTHON="$VENV_NAME/bin/python"
 sh ./setup.sh
 
 # Check if we have the PyInstaller executable, otherwise fall back to Python
-if [ -f "./main" ]; then
+if [ -f "./dist/main" ]; then
     echo "Starting module using PyInstaller executable..."
-    exec ./main $@
+    exec ./dist/main $@
 else
     echo "PyInstaller executable not found, falling back to Python..."
-    exec $PYTHON -m src.main $@
+    exec $PYTHON src/main.py $@
 fi

@@ -1,4 +1,4 @@
-"""Integration tests for HX711 Loadcell module"""
+"""Integration tests for HX711 LoadCell module"""
 
 import pytest
 pytest.skip("All tests disabled", allow_module_level=True)
@@ -11,7 +11,7 @@ from google.protobuf.struct_pb2 import Struct
 # Add src directory to Python path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from src.main import Loadcell
+from src.models.loadcell import LoadCell
 
 
 def is_raspberry_pi():
@@ -60,7 +60,7 @@ class TestHardwareIntegration:
     @pytest.fixture
     def hardware_sensor(self, hardware_config):
         """Create sensor with real hardware (no mocking)"""
-        sensor = Loadcell.new(hardware_config, dependencies={})
+        sensor = LoadCell.new(hardware_config, dependencies={})
         yield sensor
         # Cleanup after test
         try:
@@ -136,7 +136,7 @@ class TestErrorHandling:
         with pytest.raises(
             Exception, match="Data Out pin must be a valid GPIO pin number"
         ):
-            Loadcell.validate_config(config)
+            LoadCell.validate_config(config)
 
     def test_gpio_permission_handling(self):
         """Test handling of GPIO permission issues"""
@@ -154,7 +154,7 @@ class TestErrorHandling:
             mock_hx711_instance = MagicMock()
             mock_hx711_class.return_value = mock_hx711_instance
 
-            sensor = Loadcell.new(config, dependencies={})
+            sensor = LoadCell.new(config, dependencies={})
             
             # Patch the get_hx711 method to return our mock
             with patch.object(sensor, 'get_hx711', return_value=mock_hx711_instance):
@@ -180,8 +180,8 @@ class TestViamCompliance:
         mock_class, mock_instance = mock_hx711_library
         
         # Patch the get_hx711 method to return our mock
-        with patch.object(Loadcell, 'get_hx711', return_value=mock_instance):
-            sensor = Loadcell.new(basic_config, dependencies={})
+        with patch.object(LoadCell, 'get_hx711', return_value=mock_instance):
+            sensor = LoadCell.new(basic_config, dependencies={})
             
             # Initialize the sensor (this calls reconfigure internally)
             sensor.reconfigure(basic_config, dependencies={})
@@ -200,9 +200,9 @@ class TestViamCompliance:
 
     def test_model_registration(self):
         """Test that model is properly registered"""
-        assert hasattr(Loadcell, "MODEL")
-        assert Loadcell.MODEL.model_family.namespace == "edss"
-        assert Loadcell.MODEL.name == "loadcell"
+        assert hasattr(LoadCell, "MODEL")
+        assert LoadCell.MODEL.model_family.namespace == "edss"
+        assert LoadCell.MODEL.name == "loadcell"
 
 
 @pytest.mark.skip(reason="Integration tests disabled - causing hangs")
@@ -269,8 +269,8 @@ class TestRealWorldScenarios:
         mock_class, mock_instance = mock_hx711_library
 
         # Create sensor with initial config and proper mocking
-        with patch.object(Loadcell, 'get_hx711', return_value=mock_instance):
-            sensor = Loadcell.new(basic_config, dependencies={})
+        with patch.object(LoadCell, 'get_hx711', return_value=mock_instance):
+            sensor = LoadCell.new(basic_config, dependencies={})
             sensor.reconfigure(basic_config, dependencies={})
             assert sensor.numberOfReadings == 3
 

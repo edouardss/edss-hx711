@@ -38,7 +38,7 @@ fi
 
 # Verify imports work
 echo "🔍 Verifying module imports..."
-if ! "$PYTHON" -c "from src.main import Loadcell; print('✅ Module import successful')" 2>/dev/null; then
+if ! "$PYTHON" -c "from src.models.loadcell import LoadCell; print('✅ Module import successful')" 2>/dev/null; then
     echo "❌ Failed to import module. Check your src/main.py"
     exit 1
 fi

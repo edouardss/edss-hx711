@@ -1,6 +1,6 @@
 # Copy the content from the test_loadcell.py artifact I provided above
 # tests/test_loadcell.py
-"""Unit tests for HX711 Loadcell Viam module"""
+"""Unit tests for HX711 LoadCell Viam module"""
 
 import pytest
 pytest.skip("All tests disabled", allow_module_level=True)
@@ -10,20 +10,20 @@ from google.protobuf.struct_pb2 import Struct
 from viam.resource.types import Model, ModelFamily
 
 # Import your module - adjust if your structure is different
-from src.main import Loadcell
+from src.models.loadcell import LoadCell
 
 
-class TestLoadcellBasics:
+class TestLoadCellBasics:
     """Test basic functionality and configuration"""
 
     def test_model_definition(self):
         """Test that the model is properly defined"""
         expected_model = Model(ModelFamily("edss", "hx711-loadcell"), "loadcell")
-        assert Loadcell.MODEL == expected_model
+        assert LoadCell.MODEL == expected_model
 
     def test_validate_config_valid(self, basic_config):
         """Test config validation with valid configuration"""
-        errors = Loadcell.validate_config(basic_config)
+        errors = LoadCell.validate_config(basic_config)
         assert errors == []
 
     @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ class TestLoadcellBasics:
         config.attributes.CopyFrom(attributes)
 
         with pytest.raises(Exception, match=expected_error):
-            Loadcell.validate_config(config)
+            LoadCell.validate_config(config)
 
     @pytest.mark.parametrize(
         "gain_value,should_pass",
@@ -71,10 +71,10 @@ class TestLoadcellBasics:
 
         if should_pass:
             # Should not raise exception
-            Loadcell.validate_config(config)
+            LoadCell.validate_config(config)
         else:
             with pytest.raises(Exception, match="Gain must be 32, 64, or 128"):
-                Loadcell.validate_config(config)
+                LoadCell.validate_config(config)
 
     @pytest.mark.parametrize(
         "pin_value,should_pass",
@@ -100,12 +100,12 @@ class TestLoadcellBasics:
         config.attributes.CopyFrom(attributes)
 
         if should_pass:
-            Loadcell.validate_config(config)
+            LoadCell.validate_config(config)
         else:
             with pytest.raises(
                 Exception, match="Data Out pin must be a valid GPIO pin number"
             ):
-                Loadcell.validate_config(config)
+                LoadCell.validate_config(config)
 
     @pytest.mark.parametrize(
         "num_readings,should_pass",
@@ -129,13 +129,13 @@ class TestLoadcellBasics:
         config.attributes.CopyFrom(attributes)
 
         if should_pass:
-            Loadcell.validate_config(config)
+            LoadCell.validate_config(config)
         else:
             with pytest.raises(
                 Exception,
                 match="Number of readings must be a positive integer less than 100",
             ):
-                Loadcell.validate_config(config)
+                LoadCell.validate_config(config)
 
     @pytest.mark.parametrize(
         "tare_offset,should_pass",
@@ -158,13 +158,13 @@ class TestLoadcellBasics:
         config.attributes.CopyFrom(attributes)
 
         if should_pass:
-            Loadcell.validate_config(config)
+            LoadCell.validate_config(config)
         else:
             with pytest.raises(
                 Exception,
                 match="Tare offset must be a non-positive floating point value \\(≤ 0\\.0\\)",
             ):
-                Loadcell.validate_config(config)
+                LoadCell.validate_config(config)
 
     def test_reconfigure_with_all_attributes(self, loadcell_sensor):
         """Test sensor reconfiguration with all attributes set"""
@@ -179,7 +179,7 @@ class TestLoadcellBasics:
     ):
         """Test reconfiguration uses default values when attributes missing"""
         mock_class, mock_instance = mock_hx711_library
-        sensor = Loadcell.new(minimal_config, dependencies={})
+        sensor = LoadCell.new(minimal_config, dependencies={})
 
         # Should use defaults from your code
         assert sensor.gain == 64.0  # Default from your code
@@ -508,7 +508,7 @@ class TestEdgeCasesAndCalculations:
 
         # Test with 5 readings
         basic_config.attributes.fields["numberOfReadings"].number_value = 5
-        sensor = Loadcell.new(basic_config, dependencies={})
+        sensor = LoadCell.new(basic_config, dependencies={})
 
         mock_instance.get_raw_data.return_value = [80000, 81000, 82000, 83000, 84000]
         readings = await sensor.get_readings()
