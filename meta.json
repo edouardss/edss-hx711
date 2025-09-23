@@ -24,12 +24,12 @@
       "markdown_link": "README.md#3-imu-sensor"
     }
   ],
-  "entrypoint": "./run.sh",
+  "entrypoint": "dist/main",
   "first_run": "",
   "build": {
     "build": "./build.sh",
     "setup": "./setup.sh",
-    "path": "module.tar.gz",
+    "path": "dist/archive.tar.gz",
     "arch": [
       "linux/amd64",
       "linux/arm64"
