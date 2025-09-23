@@ -64,7 +64,7 @@ except ImportError:
 from hx711 import HX711
 
 
-class Loadcell(Sensor, EasyResource):
+class LoadCell(Sensor, EasyResource):
     """HX711 Load Cell sensor implementation."""
 
     MODEL: ClassVar[Model] = Model(ModelFamily("edss", "hx711-loadcell"), "loadcell")

@@ -6,12 +6,12 @@ import sys
 from viam.module.module import Module
 
 try:
-    from models.loadcell import Loadcell
+    from models.loadcell import LoadCell
     print("LoadCell imported normally")
 except Exception as e:
     print("LoadCell error occured: ", e)
     try:
-        from .models.loadcell import Loadcell
+        from .models.loadcell import LoadCell
         print("LoadCell imported locally")
     except Exception as e:
         print("LoadCell error occured: ", e)
